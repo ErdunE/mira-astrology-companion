@@ -7,5 +7,6 @@ Structure:
 - api/: Lambda handlers for API Gateway routes
 - worker/: Async worker Lambda triggered by SQS
 - common/: Shared utilities (auth, db, helpers)
+- ..
 
 Code will be implemented as tickets progress.
