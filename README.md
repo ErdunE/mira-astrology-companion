@@ -1,13 +1,13 @@
-# Project Title  
+# Project Title: Mira
 Short project summary (2–3 sentences).
-> your answer
+> This repository contains the full implementation of our CS6620 Cloud Computing Final Project. The application provides an AI-powered astrology chat assistant that generates personalized birth charts and interpretations.
 
 --
 
 ### Team Members
-- Fullname:
-- Fullname:
-- Fullname:
+- Fullname: Erdun E
+- Fullname: Raj Kavathekar
+- Fullname: Davie Wu
 
 **Team Roles**
 Describe what role each team member will take in this project and the tasks assigned to each member. 
