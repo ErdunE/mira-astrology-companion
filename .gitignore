@@ -1,2 +1,66 @@
-**/.DS_Store
+### OS ###
 .DS_Store
+**/.DS_Store
+Thumbs.db
+
+### Python ###
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+build/
+dist/
+.eggs/
+*.egg
+*.egg-info/
+.pytest_cache/
+
+### Node / Base44 ###
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+.cache/
+.eslintcache
+
+### Terraform ###
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+### Env Files ###
+.env
+.env.*
+.env.local
+.env.development.local
+.env.production.local
+
+### Frontend ###
+/app/frontend/.base44/cache
+/app/frontend/.vite
+/app/frontend/.output
+
+### AWS Artifacts ###
+aws-sam/
+.aws-sam/
+cdk.out/
+
+### Logs ###
+logs/
+*.log
+
+### IDE / Editor ###
+.vscode/
+.idea/
+*.swp
+*.swo
