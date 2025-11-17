@@ -1,0 +1,182 @@
+name: Project CI
+
+on:
+  pull_request:
+    branches: [ "main", "dev" ]
+  # push:
+  #   branches: [ "dev" ]
+
+jobs:
+  # 1. Validate PR Template Compliance
+  pr-template-check:
+    name: PR Template Compliance
+    runs-on: ubuntu-latest
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Validate PR Body Formatting
+        run: |
+          echo "Checking PR template compliance..."
+          echo "----- PR body (first 200 chars) -----"
+          echo "${PR_BODY:0:200}"
+          echo "-------------------------------------"
+
+          if [ -z "$PR_BODY" ]; then
+            echo "PR body is empty. Template not filled."
+            exit 1
+          fi
+
+          REQUIRED_FIELDS=("## Summary" "## Linked Ticket" "## Changes" "## Testing")
+          MISSING=false
+
+          for field in "${REQUIRED_FIELDS[@]}"; do
+            if ! grep -q "$field" <<< "$PR_BODY"; then
+              echo "Missing section: $field"
+              MISSING=true
+            fi
+          done
+
+          if [ "$MISSING" = true ]; then
+            echo "PR template not filled correctly."
+            exit 1
+          else
+            echo "PR template looks good."
+          fi
+
+  # 2. Backend Python Checks
+  python-backend:
+    name: Backend Python CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: check_backend
+        name: Check if backend exists
+        run: |
+          if [ -d "app/backend" ] && [ "$(ls -A app/backend)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python
+        if: steps.check_backend.outputs.exists == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          if [ -f "app/backend/requirements.txt" ]; then
+            pip install -r app/backend/requirements.txt
+          else
+            echo "No backend requirements found. Skipping."
+          fi
+
+      - name: Python Syntax Check
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          echo "Checking Python syntax..."
+          FILES="$(git ls-files '*.py')"
+          if [ -z "$FILES" ]; then
+            echo "No Python files found. Skipping syntax check."
+            exit 0
+          fi
+          python -m py_compile $FILES
+
+  # 3. Frontend Web Checks
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: check_frontend
+        name: Check if frontend exists
+        run: |
+          if [ -d "app/frontend" ] && [ "$(ls -A app/frontend)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect package.json
+        if: steps.check_frontend.outputs.exists == 'true'
+        id: detect_pkg
+        run: |
+          if [ -f "app/frontend/package.json" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node
+        if: steps.detect_pkg.outputs.found == 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install Dependencies
+        if: steps.detect_pkg.outputs.found == 'true'
+        run: |
+          cd app/frontend
+          npm install
+
+      - name: Build Frontend
+        if: steps.detect_pkg.outputs.found == 'true'
+        run: |
+          cd app/frontend
+          npm run build
+
+  # 4. Terraform Validation
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: check_tf
+        run: |
+          if ls infra/*.tf 1> /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Terraform
+        if: steps.check_tf.outputs.exists == 'true'
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        if: steps.check_tf.outputs.exists == 'true'
+        run: |
+          cd infra
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        if: steps.check_tf.outputs.exists == 'true'
+        run: |
+          cd infra
+          terraform validate
+
+  # 5. Lint / Misc
+  basic-checks:
+    name: Basic Lint & Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Ensure no secrets committed
+        run: |
+          echo "Scanning for secrets..."
+          if grep -R "AKIA[0-9A-Z]" -n . ; then
+            echo "AWS key detected!"
+            exit 1
+          else
+            echo "No secrets found."
+          fi
