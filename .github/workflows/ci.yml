@@ -11,18 +11,29 @@ jobs:
   pr-template-check:
     name: PR Template Compliance
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Validate PR Body Formatting
         run: |
           echo "Checking PR template compliance..."
+          echo "----- PR body (first 200 chars) -----"
+          echo "${PR_BODY:0:200}"
+          echo "-------------------------------------"
+
+          if [ -z "$PR_BODY" ]; then
+            echo "PR body is empty. Template not filled."
+            exit 1
+          fi
 
           REQUIRED_FIELDS=("## Summary" "## Linked Ticket" "## Changes" "## Testing")
           MISSING=false
 
           for field in "${REQUIRED_FIELDS[@]}"; do
-            if ! grep -q "$field" <<< "${{ github.event.pull_request.body }}"; then
+            if ! grep -q "$field" <<< "$PR_BODY"; then
               echo "Missing section: $field"
               MISSING=true
             fi
@@ -71,7 +82,12 @@ jobs:
         if: steps.check_backend.outputs.exists == 'true'
         run: |
           echo "Checking Python syntax..."
-          python -m py_compile $(git ls-files "*.py")
+          FILES="$(git ls-files '*.py')"
+          if [ -z "$FILES" ]; then
+            echo "No Python files found. Skipping syntax check."
+            exit 0
+          fi
+          python -m py_compile $FILES
 
   # 3. Frontend Web Checks
   frontend-build:
