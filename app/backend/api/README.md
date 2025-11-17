@@ -1,10 +1,17 @@
-# api/ — API Gateway Lambda Functions
+# API Lambda Handlers
 
-Contains handlers for:
-- /profile
-- /chat
-- /cache
-- ..
+This directory contains Lambda functions for API Gateway endpoints.
 
-Each sub-feature will receive its own Python file in later tickets.
-Currently placeholder only.
+## Current Handlers
+
+- `handler.py` - Placeholder for API endpoint logic
+
+## Adding New Handlers
+
+Create new files following the pattern:
+- `profile_handler.py` - For `/profile` endpoint
+- `chat_handler.py` - For `/chat` endpoint
+- `health_handler.py` - For `/health` endpoint
+- ...
+
+Each handler should export a `lambda_handler(event, context)` function.
