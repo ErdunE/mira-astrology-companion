@@ -11,7 +11,6 @@ jobs:
   pr-template-check:
     name: PR Template Compliance
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' }}
     env:
       PR_BODY: ${{ github.event.pull_request.body }}
     steps:
