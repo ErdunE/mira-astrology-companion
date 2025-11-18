@@ -73,6 +73,7 @@ jobs:
         run: |
           if [ -f "app/backend/requirements.txt" ]; then
             pip install -r app/backend/requirements.txt
+            pip install flake8 black pytest
           else
             echo "No backend requirements found. Skipping."
           fi
@@ -88,9 +89,44 @@ jobs:
           fi
           python -m py_compile $FILES
 
-  # 3. Frontend Web Checks
+      - name: Black Format Check
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          echo "Checking code formatting with black..."
+          FILES="$(find app/backend -name '*.py' | grep -v venv | grep -v __pycache__)"
+          if [ -z "$FILES" ]; then
+            echo "No Python files to check. Skipping."
+            exit 0
+          fi
+          black --check app/backend --exclude venv --line-length=120
+
+      - name: Flake8 Lint
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          echo "Running flake8..."
+          flake8 app/backend --exclude=venv --max-line-length=120 --ignore=E203,W503
+
+      - name: Run Backend Tests
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          echo "Running backend tests..."
+          cd app/backend
+          # Run api_wrapper tests
+          if [ -f "common/api_wrapper.py" ]; then
+            echo "Testing API wrapper..."
+            python common/api_wrapper.py
+          fi
+          # Run pytest if test files exist
+          if find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
+            echo "Running pytest..."
+            pytest
+          else
+            echo "No pytest tests found. Skipping."
+          fi
+
+  # 3. Frontend Checks
   frontend-build:
-    name: Frontend Build
+    name: Frontend Build & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -127,15 +163,22 @@ jobs:
           cd app/frontend
           npm install
 
+      - name: ESLint Check
+        if: steps.detect_pkg.outputs.found == 'true'
+        continue-on-error: true
+        run: |
+          cd app/frontend
+          npm run lint
+
       - name: Build Frontend
         if: steps.detect_pkg.outputs.found == 'true'
         run: |
           cd app/frontend
           npm run build
 
-  # 4. Terraform Validation
+  # 4. Terraform Validation (Enhanced)
   terraform-validate:
-    name: Terraform Validate
+    name: Terraform Validate & Format
     runs-on: ubuntu-latest
 
     steps:
@@ -143,7 +186,7 @@ jobs:
 
       - id: check_tf
         run: |
-          if ls infra/*.tf 1> /dev/null 2>&1; then
+          if ls infra/**/*.tf 1> /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -153,30 +196,66 @@ jobs:
         if: steps.check_tf.outputs.exists == 'true'
         uses: hashicorp/setup-terraform@v2
 
+      - name: Terraform Format Check
+        if: steps.check_tf.outputs.exists == 'true'
+        run: |
+          cd infra/terraform
+          echo "Checking Terraform formatting..."
+          terraform fmt -check -recursive
+
       - name: Terraform Init
         if: steps.check_tf.outputs.exists == 'true'
         run: |
-          cd infra
+          cd infra/terraform
           terraform init -backend=false
 
       - name: Terraform Validate
         if: steps.check_tf.outputs.exists == 'true'
         run: |
-          cd infra
+          cd infra/terraform
           terraform validate
 
-  # 5. Lint / Misc
-  basic-checks:
-    name: Basic Lint & Secrets Scan
+  # 5. Security & Secrets Scan
+  security-scan:
+    name: Security & Secrets Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Ensure no secrets committed
+      
+      - name: Scan for AWS Credentials
         run: |
-          echo "Scanning for secrets..."
-          if grep -R "AKIA[0-9A-Z]" -n . ; then
-            echo "AWS key detected!"
+          echo "Scanning for AWS credentials..."
+          if grep -R "AKIA[0-9A-Z]\{16\}" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist; then
+            echo "AWS Access Key detected!"
             exit 1
-          else
-            echo "No secrets found."
           fi
+          echo "No AWS access keys found."
+
+      - name: Scan for Secret Keys
+        run: |
+          echo "Scanning for private keys..."
+          if grep -R "BEGIN.*PRIVATE KEY" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist; then
+            echo "Private key detected!"
+            exit 1
+          fi
+          echo "No private keys found."
+
+      - name: Check for Sensitive Files
+        run: |
+          echo "Checking for sensitive files..."
+          SENSITIVE_PATTERNS=(".env" ".env.local" "*.pem" "*.key" "*.p12" "*.pfx")
+          FOUND=false
+          
+          for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+            if find . -name "$pattern" -not -path "./node_modules/*" -not -path "./venv/*" -not -path "./dist/*" | grep -q .; then
+              echo "Found sensitive file pattern: $pattern"
+              find . -name "$pattern" -not -path "./node_modules/*" -not -path "./venv/*" -not -path "./dist/*"
+              FOUND=true
+            fi
+          done
+          
+          if [ "$FOUND" = true ]; then
+            echo "Sensitive files detected! Please remove them or add to .gitignore"
+            exit 1
+          fi
+          echo "No sensitive files found."

@@ -3,8 +3,8 @@ data "aws_region" "current" {}
 resource "aws_cognito_user_pool" "this" {
   name = var.user_pool_name
 
-  username_attributes       = ["email"]
-  auto_verified_attributes  = ["email"]
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
 
   schema {
     name                = "email"
