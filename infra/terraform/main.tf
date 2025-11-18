@@ -44,3 +44,32 @@ output "cognito_hosted_ui_base_url" {
   value       = module.cognito_auth.hosted_ui_base_url
   description = "Base URL of the Cognito Hosted UI"
 }
+
+module "s3_static" {
+  source = "./modules/s3_static"
+
+  # Choose globally unique bucket names. A common pattern:
+  # <project>-<env>-frontend
+  # <project>-<env>-artifacts
+  frontend_bucket_name  = "mira-dev-frontend"
+  artifacts_bucket_name = "mira-dev-artifacts"
+
+  tags = {
+    Project = "cs6620-final"
+    Env     = "dev"
+  }
+
+  # Optional: override lifecycle behavior if needed
+  # artifacts_lifecycle_enabled          = true
+  # artifacts_lifecycle_expiration_days  = 365
+}
+
+output "frontend_bucket_name" {
+  value       = module.s3_static.frontend_bucket_name
+  description = "Name of the frontend SPA S3 bucket."
+}
+
+output "artifacts_bucket_name" {
+  value       = module.s3_static.artifacts_bucket_name
+  description = "Name of the artifacts S3 bucket."
+}
