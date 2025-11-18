@@ -1,6 +1,20 @@
-# Frontend (Base44 SPA)
+# Base44 App
 
-This folder will contain the static Single Page Application generated using Base44.
-After generation, the build artifacts will be deployed to S3 and served through CloudFront.
 
-Currently empty until Base44 UI is finalized.
+This app was created automatically by Base44.
+It's a Vite+React app that communicates with the Base44 API.
+
+## Running the app
+
+```bash
+npm install
+npm run dev
+```
+
+## Building the app
+
+```bash
+npm run build
+```
+
+For more information and support, please contact Base44 support at app@base44.com.
