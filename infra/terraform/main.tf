@@ -44,3 +44,37 @@ output "cognito_hosted_ui_base_url" {
   value       = module.cognito_auth.hosted_ui_base_url
   description = "Base URL of the Cognito Hosted UI"
 }
+
+
+
+module "dynamodb_mira" {
+  source = "./modules/dynamodb_mira"
+
+  app_name = "mira"
+  env      = "dev"
+
+  tags = {
+    Project = "cs6620-final"
+    Env     = "dev"
+  }
+}
+
+output "user_profiles_table_name" {
+  description = "DynamoDB user profiles table name"
+  value       = module.dynamodb_mira.user_profiles_table_name
+}
+
+output "conversations_table_name" {
+  description = "DynamoDB conversations table name"
+  value       = module.dynamodb_mira.conversations_table_name
+}
+
+output "user_profiles_table_arn" {
+  description = "DynamoDB user profiles table ARN"
+  value       = module.dynamodb_mira.user_profiles_table_arn
+}
+
+output "conversations_table_arn" {
+  description = "DynamoDB conversations table ARN"
+  value       = module.dynamodb_mira.conversations_table_arn
+}
