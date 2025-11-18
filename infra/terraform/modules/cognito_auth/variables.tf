@@ -30,13 +30,13 @@ variable "supported_identity_providers" {
 }
 
 variable "allowed_oauth_flows" {
-  type        = list(string)
-  default     = ["code"] # Authorization code flow
+  type    = list(string)
+  default = ["code"] # Authorization code flow
 }
 
 variable "allowed_oauth_scopes" {
-  type        = list(string)
-  default     = ["openid", "email", "profile"]
+  type    = list(string)
+  default = ["openid", "email", "profile"]
 }
 
 variable "tags" {
