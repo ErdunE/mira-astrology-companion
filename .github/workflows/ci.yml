@@ -234,7 +234,7 @@ jobs:
       - name: Scan for Secret Keys
         run: |
           echo "Scanning for private keys..."
-          if grep -R "BEGIN.*PRIVATE KEY" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist; then
+          if grep -R "BEGIN.*PRIVATE KEY" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist --exclude=ci.yml; then
             echo "Private key detected!"
             exit 1
           fi
