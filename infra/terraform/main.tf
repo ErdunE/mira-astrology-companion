@@ -3,8 +3,6 @@ data "aws_caller_identity" "current" {}
 output "current_account_id" {
   value = data.aws_caller_identity.current.account_id
 }
-
-
 module "cognito_auth" {
   source = "./modules/cognito_auth"
 
@@ -30,6 +28,11 @@ module "cognito_auth" {
   }
 }
 
+module "events_messaging" {
+  source = "./modules/events_messaging"
+}
+
+
 output "cognito_user_pool_id" {
   value       = module.cognito_auth.user_pool_id
   description = "ID of the Cognito User Pool"
@@ -43,4 +46,16 @@ output "cognito_app_client_id" {
 output "cognito_hosted_ui_base_url" {
   value       = module.cognito_auth.hosted_ui_base_url
   description = "Base URL of the Cognito Hosted UI"
+}
+
+output "events_event_bus_name" {
+  value = module.events_messaging.event_bus_name
+}
+
+output "events_main_queue_url" {
+  value = module.events_messaging.main_queue_url
+}
+
+output "events_dlq_queue_url" {
+  value = module.events_messaging.dlq_url
 }
