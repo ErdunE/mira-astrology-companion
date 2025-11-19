@@ -3,14 +3,15 @@ Health check endpoint for Mira API.
 Returns service status for monitoring and deployment verification.
 """
 
-import json
-import logging
 import sys
 import os
-from datetime import datetime
 
 # Add parent directory to Python path for local testing
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import json
+import logging
+from datetime import datetime
 
 from common import api_handler
 
