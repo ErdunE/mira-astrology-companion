@@ -1,0 +1,298 @@
+"""
+User profile validation logic.
+Validates birth date, time, and location before storing in database.
+"""
+
+from datetime import date, datetime
+from typing import Dict, Any
+
+from pydantic import BaseModel, Field, field_validator, ValidationError
+
+
+class UserProfileInput(BaseModel):
+    """
+    User profile input data model with validation.
+
+    Validates:
+    - Birth date (valid format, not in future, reasonable range)
+    - Birth time (valid 24-hour format)
+    - Birth location (not empty, reasonable length)
+    """
+
+    birth_date: str = Field(..., description="Birth date in YYYY-MM-DD format")
+    birth_time: str = Field(..., description="Birth time in HH:MM format (24-hour)")
+    birth_location: str = Field(..., description="Birth location (city, country)")
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: str) -> str:
+        """
+        Validate birth date.
+
+        Rules:
+        - Must be in YYYY-MM-DD format
+        - Must be a valid date
+        - Cannot be in the future
+        - Cannot be before 1900-01-01 (reasonable lower bound)
+
+        Args:
+            v: Date string to validate
+
+        Returns:
+            Validated date string
+
+        Raises:
+            ValueError: If date is invalid
+        """
+        # Parse date
+        try:
+            parsed_date = datetime.strptime(v, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError("Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)")
+
+        # Check not in future
+        if parsed_date > date.today():
+            raise ValueError("Birth date cannot be in the future")
+
+        # Check not too old (before 1900)
+        if parsed_date < date(1900, 1, 1):
+            raise ValueError("Birth date cannot be before 1900-01-01")
+
+        return v
+
+    @field_validator("birth_time")
+    @classmethod
+    def validate_birth_time(cls, v: str) -> str:
+        """
+        Validate birth time.
+
+        Rules:
+        - Must be in HH:MM format (24-hour)
+        - Hour must be 0-23
+        - Minute must be 0-59
+
+        Args:
+            v: Time string to validate
+
+        Returns:
+            Validated time string
+
+        Raises:
+            ValueError: If time is invalid
+        """
+        # Parse time
+        try:
+            datetime.strptime(v, "%H:%M").time()
+        except ValueError:
+            raise ValueError("Invalid time format...")
+
+        # Additional validation (already handled by strptime, but explicit)
+        hour, minute = map(int, v.split(":"))
+        if not (0 <= hour <= 23):
+            raise ValueError("Hour must be between 0 and 23")
+        if not (0 <= minute <= 59):
+            raise ValueError("Minute must be between 0 and 59")
+
+        return v
+
+    @field_validator("birth_location")
+    @classmethod
+    def validate_birth_location(cls, v: str) -> str:
+        """
+        Validate birth location.
+
+        Rules:
+        - Cannot be empty or only whitespace
+        - Must be between 2 and 100 characters
+        - Should contain valid characters
+
+        Args:
+            v: Location string to validate
+
+        Returns:
+            Validated and trimmed location string
+
+        Raises:
+            ValueError: If location is invalid
+        """
+        # Trim whitespace
+        trimmed = v.strip()
+
+        # Check not empty
+        if not trimmed:
+            raise ValueError("Location cannot be empty")
+
+        # Check length
+        if len(trimmed) < 2:
+            raise ValueError("Location must be at least 2 characters")
+        if len(trimmed) > 100:
+            raise ValueError("Location must be at most 100 characters")
+
+        return trimmed
+
+
+def validate_user_profile(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate user profile data.
+
+    This is the main validation function to be used by API handlers.
+
+    Args:
+        data: Dict containing birth_date, birth_time, birth_location
+
+    Returns:
+        Validated data dict with trimmed/normalized values
+
+    Raises:
+        ValueError: If any validation fails (with clear error message)
+
+    Example:
+        >>> validate_user_profile({
+        ...     "birth_date": "1990-01-15",
+        ...     "birth_time": "14:30",
+        ...     "birth_location": "New York, NY"
+        ... })
+        {'birth_date': '1990-01-15', 'birth_time': '14:30', 'birth_location': 'New York, NY'}
+    """
+    try:
+        # Pydantic will validate all fields automatically
+        profile = UserProfileInput(**data)
+
+        # Return validated data as dict
+        return {
+            "birth_date": profile.birth_date,
+            "birth_time": profile.birth_time,
+            "birth_location": profile.birth_location,
+        }
+
+    except ValidationError as e:
+        # Extract first error message for clarity
+        first_error = e.errors()[0]
+        field = first_error["loc"][0]
+        msg = first_error["msg"]
+
+        # Raise ValueError (will be caught by api_handler wrapper → 400 response)
+        raise ValueError(f"Validation failed for {field}: {msg}")
+
+
+# Local testing
+if __name__ == "__main__":
+    print("Testing User Profile Validation\n")
+    print("=" * 60)
+
+    # Test 1: Valid profile
+    print("\n[Test 1] Valid profile data")
+    print("-" * 60)
+    valid_data = {"birth_date": "1990-01-15", "birth_time": "14:30", "birth_location": "New York, NY"}
+
+    try:
+        result = validate_user_profile(valid_data)
+        print(f"Validation passed: {result}")
+        assert result["birth_date"] == "1990-01-15"
+        assert result["birth_time"] == "14:30"
+        assert result["birth_location"] == "New York, NY"
+        print("Test 1 passed")
+    except ValueError as e:
+        print(f"Unexpected error: {e}")
+        raise
+
+    # Test 2: Invalid date format
+    print("\n[Test 2] Invalid date format")
+    print("-" * 60)
+    invalid_date = {"birth_date": "15/01/1990", "birth_time": "14:30", "birth_location": "New York"}
+
+    try:
+        validate_user_profile(invalid_date)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        assert "date format" in str(e).lower()
+        print("Test 2 passed")
+
+    # Test 3: Future date
+    print("\n[Test 3] Future birth date")
+    print("-" * 60)
+    future_date = {"birth_date": "2030-12-31", "birth_time": "14:30", "birth_location": "New York"}
+
+    try:
+        validate_user_profile(future_date)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        assert "future" in str(e).lower()
+        print("Test 3 passed")
+
+    # Test 4: Invalid time format
+    print("\n[Test 4] Invalid time format")
+    print("-" * 60)
+    invalid_time = {"birth_date": "1990-01-15", "birth_time": "25:99", "birth_location": "New York"}
+
+    try:
+        validate_user_profile(invalid_time)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        assert "time format" in str(e).lower()
+        print("Test 4 passed")
+
+    # Test 5: Empty location
+    print("\n[Test 5] Empty location")
+    print("-" * 60)
+    empty_location = {"birth_date": "1990-01-15", "birth_time": "14:30", "birth_location": "   "}
+
+    try:
+        validate_user_profile(empty_location)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        assert "empty" in str(e).lower()
+        print("Test 5 passed")
+
+    # Test 6: Missing field
+    print("\n[Test 6] Missing required field")
+    print("-" * 60)
+    missing_field = {"birth_date": "1990-01-15", "birth_time": "14:30"}
+
+    try:
+        validate_user_profile(missing_field)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        print("Test 6 passed")
+
+    # Test 7: Very old date (edge case)
+    print("\n[Test 7] Date before 1900")
+    print("-" * 60)
+    old_date = {"birth_date": "1850-01-15", "birth_time": "14:30", "birth_location": "London"}
+
+    try:
+        validate_user_profile(old_date)
+        print("Should have raised ValueError")
+        raise AssertionError("Validation should have failed")
+    except ValueError as e:
+        print(f"Correctly rejected: {e}")
+        assert "1900" in str(e)
+        print("Test 7 passed")
+
+    # Test 8: Location trimming
+    print("\n[Test 8] Location with extra whitespace")
+    print("-" * 60)
+    whitespace_location = {"birth_date": "1990-01-15", "birth_time": "14:30", "birth_location": "  New York  "}
+
+    try:
+        result = validate_user_profile(whitespace_location)
+        print(f"Validation passed, location trimmed: '{result['birth_location']}'")
+        assert result["birth_location"] == "New York"
+        print("Test 8 passed")
+    except ValueError as e:
+        print(f"Unexpected error: {e}")
+        raise
+
+    print("\n" + "=" * 60)
+    print("All 8 tests passed!")
+    print("\nValidation module is ready to use.")
