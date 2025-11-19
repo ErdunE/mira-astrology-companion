@@ -144,6 +144,50 @@ output "artifacts_bucket_name" {
   description = "Name of the artifacts S3 bucket."
 }
 
+
+module "api_lambda" {
+  source = "./modules/lambda_api"
+
+  environment           = "dev"
+  name_prefix           = "mira"
+  function_name         = "mira-api-dev"
+  runtime               = "nodejs20.x"
+  handler               = "index.handler"
+  source_dir            = "${path.root}/lambda_src/api"
+  memory_size           = 256
+  timeout               = 10
+  environment_variables = { STAGE = "dev" }
+  create_http_api       = true
+}
+
+output "api_invoke_url" {
+  value       = module.api_lambda.invoke_url
+  description = "Base URL for the API Lambda"
+}
+
+module "worker_lambda" {
+  source = "./modules/lambda_worker"
+
+  environment           = "dev"
+  name_prefix           = "mira"
+  function_name         = "mira-worker-dev"
+  runtime               = "nodejs20.x"
+  handler               = "index.handler"
+  source_dir            = "${path.root}/lambda_src/worker"
+  memory_size           = 256
+  timeout               = 30
+  environment_variables = { STAGE = "dev" }
+
+  sqs_queue_arn = module.events_messaging.main_queue_arn
+  batch_size    = 5
+}
+
+output "worker_lambda_arn" {
+  value       = module.worker_lambda.function_arn
+  description = "Worker Lambda ARN"
+}
+
+
 module "bedrock_vpce" {
   source = "./modules/bedrock_vpce"
 
