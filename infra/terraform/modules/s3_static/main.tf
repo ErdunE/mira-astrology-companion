@@ -79,7 +79,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
       status = "Enabled"
 
       filter {
-      prefix = ""
+        prefix = ""
       }
 
       noncurrent_version_expiration {
