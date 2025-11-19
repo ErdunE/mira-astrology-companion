@@ -6,15 +6,15 @@ data "aws_caller_identity" "current" {}
 # Frontend SPA bucket
 # -------------------------------------
 resource "aws_s3_bucket" "frontend" {
-    bucket = var.frontend_bucket_name
+  bucket = var.frontend_bucket_name
 
-    tags = merge(
-        var.tags,
-        {
-            "Name"        = var.frontend_bucket_name
-            "BucketScope" = "frontend-spa"
-        }
-    )
+  tags = merge(
+    var.tags,
+    {
+      "Name"        = var.frontend_bucket_name
+      "BucketScope" = "frontend-spa"
+    }
+  )
 }
 
 resource "aws_s3_bucket_versioning" "frontend" {
@@ -39,8 +39,8 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 # -------------------------------------
 
 resource "aws_s3_bucket" "artifacts" {
-    bucket = var.artifacts_bucket_name
-    tags = merge(
+  bucket = var.artifacts_bucket_name
+  tags = merge(
     var.tags,
     {
       "Name"        = var.artifacts_bucket_name
@@ -77,6 +77,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
     content {
       id     = "artifacts-noncurrent-expiration"
       status = "Enabled"
+
+      filter {
+      prefix = ""
+      }
 
       noncurrent_version_expiration {
         noncurrent_days = var.artifacts_lifecycle_expiration_days
