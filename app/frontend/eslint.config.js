@@ -33,6 +33,13 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+
+      // Project-specific rules
+      'react/prop-types': 'off',              // Disable prop-types (using shadcn/ui)
+      'no-unused-vars': 'error',              // Keep as error
+      'react-hooks/exhaustive-deps': 'warn',  // Warn for missing hook deps
+      'react/no-unknown-property': 'warn',    // Warn for unknown props (not error)
+      'react/no-unescaped-entities': 'warn',  // Warn for unescaped entities
     },
   },
 ]
