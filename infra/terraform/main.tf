@@ -28,11 +28,6 @@ module "cognito_auth" {
   }
 }
 
-module "events_messaging" {
-  source = "./modules/events_messaging"
-}
-
-
 output "cognito_user_pool_id" {
   value       = module.cognito_auth.user_pool_id
   description = "ID of the Cognito User Pool"
@@ -48,6 +43,11 @@ output "cognito_hosted_ui_base_url" {
   description = "Base URL of the Cognito Hosted UI"
 }
 
+
+module "events_messaging" {
+  source = "./modules/events_messaging"
+}
+
 output "events_event_bus_name" {
   value = module.events_messaging.event_bus_name
 }
@@ -58,4 +58,37 @@ output "events_main_queue_url" {
 
 output "events_dlq_queue_url" {
   value = module.events_messaging.dlq_url
+}
+
+
+module "dynamodb_mira" {
+  source = "./modules/dynamodb_mira"
+
+  app_name = "mira"
+  env      = "dev"
+
+  tags = {
+    Project = "cs6620-final"
+    Env     = "dev"
+  }
+}
+
+output "user_profiles_table_name" {
+  description = "DynamoDB user profiles table name"
+  value       = module.dynamodb_mira.user_profiles_table_name
+}
+
+output "conversations_table_name" {
+  description = "DynamoDB conversations table name"
+  value       = module.dynamodb_mira.conversations_table_name
+}
+
+output "user_profiles_table_arn" {
+  description = "DynamoDB user profiles table ARN"
+  value       = module.dynamodb_mira.user_profiles_table_arn
+}
+
+output "conversations_table_arn" {
+  description = "DynamoDB conversations table ARN"
+  value       = module.dynamodb_mira.conversations_table_arn
 }
