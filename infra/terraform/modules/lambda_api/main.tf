@@ -119,17 +119,17 @@ resource "aws_apigatewayv2_api" "http_api" {
 }
 
 resource "aws_apigatewayv2_integration" "lambda_proxy" {
-  count                     = var.create_http_api ? 1 : 0
-  api_id                    = aws_apigatewayv2_api.http_api[0].id
-  integration_type          = "AWS_PROXY"
-  integration_uri           = local.fn_arn
-  payload_format_version    = "2.0"
-  timeout_milliseconds      = 29000
+  count                  = var.create_http_api ? 1 : 0
+  api_id                 = aws_apigatewayv2_api.http_api[0].id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = local.fn_arn
+  payload_format_version = "2.0"
+  timeout_milliseconds   = 29000
 }
 
 resource "aws_apigatewayv2_route" "routes" {
-  for_each = var.create_http_api ? toset(var.route_keys) : toset([])
-  api_id   = aws_apigatewayv2_api.http_api[0].id
+  for_each  = var.create_http_api ? toset(var.route_keys) : toset([])
+  api_id    = aws_apigatewayv2_api.http_api[0].id
   route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy[0].id}"
 }

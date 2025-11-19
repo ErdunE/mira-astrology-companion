@@ -1,5 +1,5 @@
 output "function_name" { value = local.fn_name }
-output "function_arn"  { value = local.fn_arn }
+output "function_arn" { value = local.fn_arn }
 
 output "http_api_id" {
   value       = try(aws_apigatewayv2_api.http_api[0].id, null)
