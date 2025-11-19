@@ -143,3 +143,28 @@ output "artifacts_bucket_name" {
   value       = module.s3_static.artifacts_bucket_name
   description = "Name of the artifacts S3 bucket."
 }
+
+module "bedrock_vpce" {
+  source = "./modules/bedrock_vpce"
+
+  environment        = "dev"
+  name_prefix        = "mira"
+  vpc_id             = module.network_vpc.vpc_id
+  private_subnet_ids = module.network_vpc.private_subnet_ids
+  vpc_cidr_block     = "10.0.0.0/16"
+
+  # Optionally tighten to your Lambda SGs later:
+  # allowed_security_group_ids = [aws_security_group.lambda.id]
+  # or narrow CIDRs:
+  # allowed_cidr_blocks = ["10.0.11.0/24", "10.0.12.0/24"]
+}
+
+output "bedrock_vpce_id" {
+  value       = module.bedrock_vpce.vpc_endpoint_id
+  description = "Bedrock runtime interface endpoint ID"
+}
+
+output "bedrock_vpce_sg_id" {
+  value       = module.bedrock_vpce.security_group_id
+  description = "Security group ID for the Bedrock interface endpoint"
+}
