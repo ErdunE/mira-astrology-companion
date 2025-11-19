@@ -41,8 +41,8 @@ resource "aws_cloudwatch_event_bus" "mira_bus" {
 
 # 2) Event Rule: Matches events with source = "mira.test".
 resource "aws_cloudwatch_event_rule" "mira_test_rule" {
-  name          = "mira-test-events-dev"
-  description   = "Route test events from mira.test to SQS queue"
+  name           = "mira-test-events-dev"
+  description    = "Route test events from mira.test to SQS queue"
   event_bus_name = aws_cloudwatch_event_bus.mira_bus.name
 
   # Event matching rules (which can be expanded later based on business needs)
@@ -53,10 +53,10 @@ resource "aws_cloudwatch_event_rule" "mira_test_rule" {
 
 # 3) Event Target: Sends events that meet the rules to the SQS main queue.
 resource "aws_cloudwatch_event_target" "mira_sqs_target" {
-  rule          = aws_cloudwatch_event_rule.mira_test_rule.name
+  rule           = aws_cloudwatch_event_rule.mira_test_rule.name
   event_bus_name = aws_cloudwatch_event_rule.mira_test_rule.event_bus_name
-  target_id     = "mira-events-queue-dev"
-  arn           = aws_sqs_queue.events_main.arn
+  target_id      = "mira-events-queue-dev"
+  arn            = aws_sqs_queue.events_main.arn
 }
 
 
