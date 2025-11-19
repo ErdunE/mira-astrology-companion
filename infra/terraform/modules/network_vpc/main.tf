@@ -70,7 +70,7 @@ resource "aws_subnet" "private" {
 # NAT Gateways (1 per AZ, each in a public subnet)
 # -------------------------
 resource "aws_eip" "nat" {
-  count = length(var.azs)
+  count  = length(var.azs)
   domain = "vpc"
 
   tags = merge(local.common_tags, {
