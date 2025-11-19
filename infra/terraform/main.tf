@@ -92,3 +92,24 @@ output "conversations_table_arn" {
   description = "DynamoDB conversations table ARN"
   value       = module.dynamodb_mira.conversations_table_arn
 }
+
+
+module "network_vpc" {
+  source = "./modules/network_vpc"
+
+  environment    = "dev"
+  name_prefix    = "mira"
+  vpc_cidr_block = "10.0.0.0/16"
+  azs            = ["us-east-1a", "us-east-1b"]
+
+  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+  tags = {
+    Owner = "davie"
+  }
+}
+
+output "vpc_id" {
+  value = module.network_vpc.vpc_id
+}
