@@ -73,3 +73,7 @@ variable "maximum_batching_window_in_seconds" {
   type    = number
   default = 5
 }
+
+variable "astrologer_api_secret_arn" {
+  type = string
+}
