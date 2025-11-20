@@ -1,0 +1,102 @@
+locals {
+  common_tags = merge({
+    Environment = var.environment
+    Project     = var.name_prefix
+    ManagedBy   = "terraform"
+  }, var.tags)
+
+  api_name = "${var.name_prefix}-http-api-${var.environment}"
+}
+
+# HTTP API
+resource "aws_apigatewayv2_api" "this" {
+  name          = local.api_name
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_origins = ["*"] # The domain name can be replaced with the front-end domain name later.
+    allow_headers = ["*"]
+  }
+
+  tags = local.common_tags
+}
+
+# Default stage with auto-deploy
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.this.id
+  name        = "$default"
+  auto_deploy = true
+
+  tags = local.common_tags
+}
+
+# Lambda integration (A single Lambda handles all routes.)
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id = aws_apigatewayv2_api.this.id
+
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+
+  # Construct the integration URI using the function ARN.
+  integration_uri = "arn:aws:apigateway.${var.region}:lambda:path/2015-03-31/functions/${var.lambda_function_arn}/invocations"
+
+  payload_format_version = "2.0"
+}
+
+
+# JWT Authorizer (Cognito)
+resource "aws_apigatewayv2_authorizer" "jwt" {
+  name             = "${local.api_name}-jwt-authorizer"
+  api_id           = aws_apigatewayv2_api.this.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+
+  jwt_configuration {
+    audience = [var.cognito_app_client_id]
+    issuer   = "https://cognito-idp.${var.region}.amazonaws.com/${var.cognito_user_pool_id}"
+  }
+}
+
+# Routes
+## Health (public, no auth)
+resource "aws_apigatewayv2_route" "health" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /health"
+
+  target = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+## Chat (protected)
+resource "aws_apigatewayv2_route" "chat" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "POST /chat"
+
+  target = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = [] # Scope can be added later if needed.
+}
+
+## Profile (protected)
+resource "aws_apigatewayv2_route" "profile" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /profile"
+
+  target = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+# Allow API Gateway to invoke Lambda
+resource "aws_lambda_permission" "apigw_invoke" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_arn
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
+}

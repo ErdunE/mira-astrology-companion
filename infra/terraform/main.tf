@@ -1,4 +1,5 @@
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 output "current_account_id" {
   value = data.aws_caller_identity.current.account_id
@@ -234,4 +235,25 @@ module "gateway_endpoints" {
   vpc_id                  = module.network_vpc.vpc_id
   private_route_table_ids = module.network_vpc.private_route_table_ids
   tags                    = var.tags
+}
+
+
+module "api_gateway" {
+  source = "./modules/api_gateway"
+
+  name_prefix = var.name_prefix
+  environment = var.environment
+
+  lambda_function_arn = module.api_lambda.function_arn
+
+  cognito_user_pool_id  = module.cognito_auth.user_pool_id
+  cognito_app_client_id = module.cognito_auth.app_client_id
+
+  region = data.aws_region.current.name
+  tags   = var.tags
+}
+
+output "http_api_endpoint" {
+  value       = module.api_gateway.api_endpoint
+  description = "HTTP API Gateway base endpoint"
 }
