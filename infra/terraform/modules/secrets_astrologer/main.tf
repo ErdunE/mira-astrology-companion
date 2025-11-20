@@ -21,4 +21,8 @@ resource "aws_secretsmanager_secret_version" "astrologer_api" {
   secret_string = jsonencode({
     api_key = var.astrologer_api_key
   })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
