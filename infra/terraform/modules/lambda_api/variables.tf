@@ -74,3 +74,8 @@ variable "stage_name" {
   type    = string
   default = "$default"
 }
+
+variable "astrologer_api_secret_arn" {
+  type        = string
+  description = "ARN of the Secrets Manager secret that stores the Astrologer API key"
+}
