@@ -148,16 +148,17 @@ output "artifacts_bucket_name" {
 module "api_lambda" {
   source = "./modules/lambda_api"
 
-  environment           = "dev"
-  name_prefix           = "mira"
-  function_name         = "mira-api-dev"
-  runtime               = "nodejs20.x"
-  handler               = "index.handler"
-  source_dir            = "${path.root}/lambda_src/api"
-  memory_size           = 256
-  timeout               = 10
-  environment_variables = { STAGE = "dev" }
-  create_http_api       = true
+  environment               = "dev"
+  name_prefix               = "mira"
+  function_name             = "mira-api-dev"
+  runtime                   = "nodejs20.x"
+  handler                   = "index.handler"
+  source_dir                = "${path.root}/lambda_src/api"
+  memory_size               = 256
+  timeout                   = 10
+  environment_variables     = { STAGE = "dev" }
+  create_http_api           = true
+  astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
 }
 
 output "api_invoke_url" {
@@ -178,8 +179,9 @@ module "worker_lambda" {
   timeout               = 30
   environment_variables = { STAGE = "dev" }
 
-  sqs_queue_arn = module.events_messaging.main_queue_arn
-  batch_size    = 5
+  sqs_queue_arn             = module.events_messaging.main_queue_arn
+  batch_size                = 5
+  astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
 }
 
 output "worker_lambda_arn" {
@@ -212,3 +214,15 @@ output "bedrock_vpce_sg_id" {
   value       = module.bedrock_vpce.security_group_id
   description = "Security group ID for the Bedrock interface endpoint"
 }
+
+
+module "secrets_astrologer" {
+  source      = "./modules/secrets_astrologer"
+  name_prefix = var.name_prefix
+  environment = var.environment
+  tags        = var.tags
+
+  astrologer_api_key = var.astrologer_api_key
+}
+
+

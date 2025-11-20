@@ -44,6 +44,30 @@ resource "aws_iam_role_policy" "logs_basic" {
   policy = data.aws_iam_policy_document.logs_basic.json
 }
 
+# ----- Secrets Manager permission for Astrologer API key -----
+
+data "aws_iam_policy_document" "secrets_astrologer" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret",
+    ]
+
+    resources = [
+      var.astrologer_api_secret_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "secrets_astrologer" {
+  name   = "${var.name_prefix}-${var.function_name}-secrets"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.secrets_astrologer.json
+}
+
+
 # Package from source_dir
 data "archive_file" "lambda_zip" {
   count       = var.source_dir != null ? 1 : 0
