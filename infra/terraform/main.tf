@@ -226,3 +226,12 @@ module "secrets_astrologer" {
 }
 
 
+module "gateway_endpoints" {
+  source = "./modules/gateway_endpoints"
+
+  name_prefix             = var.name_prefix
+  environment             = var.environment
+  vpc_id                  = module.network_vpc.vpc_id
+  private_route_table_ids = module.network_vpc.private_route_table_ids
+  tags                    = var.tags
+}
