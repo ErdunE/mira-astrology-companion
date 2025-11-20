@@ -4,11 +4,11 @@ output "security_group_id" {
 }
 
 output "vpc_endpoint_id" {
-  description = "Bedrock runtime interface endpoint ID"
-  value       = aws_vpc_endpoint.bedrock_runtime.id
+  description = "VPC Endpoint ID for Bedrock runtime"
+  value       = aws_vpc_endpoint.interface["bedrock"].id
 }
 
 output "vpc_endpoint_dns_entries" {
-  description = "DNS entries for the interface endpoint"
-  value       = aws_vpc_endpoint.bedrock_runtime.dns_entry
+  description = "DNS entries for the Bedrock runtime VPC endpoint"
+  value       = aws_vpc_endpoint.interface["bedrock"].dns_entry
 }

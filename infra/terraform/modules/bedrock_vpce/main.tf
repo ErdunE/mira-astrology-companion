@@ -6,17 +6,25 @@ locals {
   }, var.tags)
 
   cidrs_effective = length(var.allowed_cidr_blocks) > 0 ? var.allowed_cidr_blocks : [var.vpc_cidr_block]
+
+  interface_services = [
+    "logs",           # CloudWatch Logs
+    "xray",           # X-Ray
+    "secretsmanager", # AWS Secrets Manager
+    "sts",            # AWS STS
+    "bedrock",        # Bedrock runtime
+  ]
 }
 
 data "aws_region" "current" {}
 
 resource "aws_security_group" "bedrock_vpce" {
-  name        = "${var.name_prefix}-bedrock-vpce-${var.environment}"
-  description = "Security group for Bedrock interface VPC endpoint"
+  name        = "${var.name_prefix}-vpce-${var.environment}"
+  description = "Security group for interface VPC endpoints (Logs, X-Ray, Secrets, STS, Bedrock)"
   vpc_id      = var.vpc_id
 
   tags = merge(local.common_tags, {
-    Name = "${var.name_prefix}-bedrock-vpce-${var.environment}"
+    Name = "${var.name_prefix}-vpce-${var.environment}"
   })
 }
 
@@ -52,15 +60,22 @@ resource "aws_security_group_rule" "ingress_from_sgs" {
   description              = "Allow HTTPS from allowed SGs"
 }
 
-resource "aws_vpc_endpoint" "bedrock_runtime" {
-  vpc_id              = var.vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.name}.bedrock-runtime"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.private_subnet_ids
-  security_group_ids  = [aws_security_group.bedrock_vpce.id]
+resource "aws_vpc_endpoint" "interface" {
+  for_each = toset(local.interface_services)
+
+  vpc_id            = var.vpc_id
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.private_subnet_ids
+  security_group_ids = [
+    aws_security_group.bedrock_vpce.id
+  ]
+
+  service_name = each.key == "bedrock" ? "com.amazonaws.${data.aws_region.current.name}.bedrock-runtime" : "com.amazonaws.${data.aws_region.current.name}.${each.key}"
+
   private_dns_enabled = true
 
   tags = merge(local.common_tags, {
-    Name = "${var.name_prefix}-bedrock-runtime-vpce-${var.environment}"
+    Name    = "${var.name_prefix}-${each.key}-vpce-${var.environment}"
+    Service = each.key
   })
 }
