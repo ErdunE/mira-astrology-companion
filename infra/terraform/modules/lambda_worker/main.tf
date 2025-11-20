@@ -38,6 +38,12 @@ data "aws_iam_policy_document" "logs_basic" {
   }
 }
 
+# Allow Lambda to manage ENIs in VPC (required when using subnet_ids + security_group_ids)
+resource "aws_iam_role_policy_attachment" "vpc_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 resource "aws_iam_role_policy" "logs_basic" {
   name   = "${var.name_prefix}-${var.function_name}-logs"
   role   = aws_iam_role.lambda_role.id

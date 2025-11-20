@@ -67,6 +67,31 @@ resource "aws_iam_role_policy" "secrets_astrologer" {
   policy = data.aws_iam_policy_document.secrets_astrologer.json
 }
 
+# ----- DynamoDB permission for UserProfiles table -----
+
+data "aws_iam_policy_document" "dynamodb_userprofiles" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:GetItem",
+      "dynamodb:DeleteItem"
+    ]
+
+    resources = [
+      var.dynamodb_userprofiles_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "dynamodb_userprofiles" {
+  name   = "${var.name_prefix}-${var.function_name}-dynamodb"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.dynamodb_userprofiles.json
+}
+
 
 # Package from source_dir
 data "archive_file" "lambda_zip" {
@@ -135,42 +160,42 @@ locals {
 }
 
 # HTTP API Gateway (optional)
-resource "aws_apigatewayv2_api" "http_api" {
-  count         = var.create_http_api ? 1 : 0
-  name          = "${var.name_prefix}-http-api-${var.environment}"
-  protocol_type = "HTTP"
-  tags          = local.common_tags
-}
+# resource "aws_apigatewayv2_api" "http_api" {
+# count         = var.create_http_api ? 1 : 0
+# name          = "${var.name_prefix}-http-api-${var.environment}"
+# protocol_type = "HTTP"
+# tags          = local.common_tags
+# }
 
-resource "aws_apigatewayv2_integration" "lambda_proxy" {
-  count                  = var.create_http_api ? 1 : 0
-  api_id                 = aws_apigatewayv2_api.http_api[0].id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = local.fn_arn
-  payload_format_version = "2.0"
-  timeout_milliseconds   = 29000
-}
+# resource "aws_apigatewayv2_integration" "lambda_proxy" {
+# count                  = var.create_http_api ? 1 : 0
+# api_id                 = aws_apigatewayv2_api.http_api[0].id
+# integration_type       = "AWS_PROXY"
+# integration_uri        = local.fn_arn
+# payload_format_version = "2.0"
+# timeout_milliseconds   = 29000
+# }
 
-resource "aws_apigatewayv2_route" "routes" {
-  for_each  = var.create_http_api ? toset(var.route_keys) : toset([])
-  api_id    = aws_apigatewayv2_api.http_api[0].id
-  route_key = each.value
-  target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy[0].id}"
-}
+# resource "aws_apigatewayv2_route" "routes" {
+# for_each  = var.create_http_api ? toset(var.route_keys) : toset([])
+# api_id    = aws_apigatewayv2_api.http_api[0].id
+# route_key = each.value
+# target    = "integrations/${aws_apigatewayv2_integration.lambda_proxy[0].id}"
+# }
 
-resource "aws_apigatewayv2_stage" "stage" {
-  count       = var.create_http_api ? 1 : 0
-  api_id      = aws_apigatewayv2_api.http_api[0].id
-  name        = var.stage_name
-  auto_deploy = true
-  tags        = local.common_tags
-}
+# resource "aws_apigatewayv2_stage" "stage" {
+# count       = var.create_http_api ? 1 : 0
+# api_id      = aws_apigatewayv2_api.http_api[0].id
+# name        = var.stage_name
+# auto_deploy = true
+# tags        = local.common_tags
+# }
 
-resource "aws_lambda_permission" "allow_apigw_invoke" {
-  count         = var.create_http_api ? 1 : 0
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.fn_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http_api[0].execution_arn}/*/*"
-}
+# resource "aws_lambda_permission" "allow_apigw_invoke" {
+# count         = var.create_http_api ? 1 : 0
+# statement_id  = "AllowAPIGatewayInvoke"
+# action        = "lambda:InvokeFunction"
+# function_name = local.fn_name
+# principal     = "apigateway.amazonaws.com"
+# source_arn    = "${aws_apigatewayv2_api.http_api[0].execution_arn}/*/*"
+# }

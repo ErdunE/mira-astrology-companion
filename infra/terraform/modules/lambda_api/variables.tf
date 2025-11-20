@@ -79,3 +79,8 @@ variable "astrologer_api_secret_arn" {
   type        = string
   description = "ARN of the Secrets Manager secret that stores the Astrologer API key"
 }
+
+variable "dynamodb_userprofiles_arn" {
+  type        = string
+  description = "ARN of DynamoDB UserProfiles table"
+}
