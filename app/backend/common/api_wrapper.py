@@ -38,7 +38,7 @@ def api_handler(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-        request_id = context.request_id if context else "local-test"
+        request_id = context.aws_request_id if context else "local-test"
 
         try:
             # Log incoming request

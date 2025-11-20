@@ -57,7 +57,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     class MockContext:
-        request_id = "test-health-check"
+        aws_request_id = "test-health-check"
 
     # Test: GET /health
     print("\n[Test] GET /health")
