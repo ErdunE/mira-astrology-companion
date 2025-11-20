@@ -13,6 +13,7 @@ locals {
     "secretsmanager", # AWS Secrets Manager
     "sts",            # AWS STS
     "bedrock",        # Bedrock runtime
+    "events",         # EventBridge
   ]
 }
 
