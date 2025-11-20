@@ -122,7 +122,7 @@ module "s3_static" {
   # Choose globally unique bucket names. A common pattern:
   # <project>-<env>-frontend
   # <project>-<env>-artifacts
-  frontend_bucket_name  = "mira-dev-frontend"
+  frontend_bucket_name  = "mira-dev-frontend-us-east-1"
   artifacts_bucket_name = "mira-dev-artifacts"
 
   tags = {
@@ -149,40 +149,58 @@ output "artifacts_bucket_name" {
 module "api_lambda" {
   source = "./modules/lambda_api"
 
-  environment               = "dev"
-  name_prefix               = "mira"
-  function_name             = "mira-api-dev"
-  runtime                   = "nodejs20.x"
-  handler                   = "index.handler"
-  source_dir                = "${path.root}/lambda_src/api"
-  memory_size               = 256
-  timeout                   = 10
-  environment_variables     = { STAGE = "dev" }
-  create_http_api           = true
+  environment   = "dev"
+  name_prefix   = "mira"
+  function_name = "mira-api-dev"
+
+  runtime = "python3.10"
+  handler = "handler.lambda_handler"
+
+  source_dir  = "${path.root}/lambda_src/api"
+  memory_size = 256
+  timeout     = 10
+
+  environment_variables = {
+    STAGE                        = "dev"
+    DYNAMODB_PROFILES_TABLE      = module.dynamodb_mira.user_profiles_table_name
+    DYNAMODB_CONVERSATIONS_TABLE = module.dynamodb_mira.conversations_table_name
+    ASTROLOGY_SECRET_NAME        = "/mira/astrology/api_key"
+  }
+
   astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
+
+  dynamodb_userprofiles_arn = module.dynamodb_mira.user_profiles_table_arn
 }
 
-output "api_invoke_url" {
-  value       = module.api_lambda.invoke_url
-  description = "Base URL for the API Lambda"
-}
 
 module "worker_lambda" {
   source = "./modules/lambda_worker"
 
-  environment           = "dev"
-  name_prefix           = "mira"
-  function_name         = "mira-worker-dev"
-  runtime               = "nodejs20.x"
-  handler               = "index.handler"
-  source_dir            = "${path.root}/lambda_src/worker"
-  memory_size           = 256
-  timeout               = 30
-  environment_variables = { STAGE = "dev" }
+  environment   = "dev"
+  name_prefix   = "mira"
+  function_name = "mira-worker-dev"
+  runtime       = "python3.10"
+  handler       = "handler.lambda_handler"
+  source_dir    = "${path.root}/lambda_src/worker"
+  memory_size   = 256
+  timeout       = 30
+  environment_variables = {
+    STAGE                        = "dev"
+    DYNAMODB_PROFILES_TABLE      = module.dynamodb_mira.user_profiles_table_name
+    DYNAMODB_CONVERSATIONS_TABLE = module.dynamodb_mira.conversations_table_name
 
-  sqs_queue_arn             = module.events_messaging.main_queue_arn
-  batch_size                = 5
+    ASTROLOGY_SECRET_NAME = "/mira/astrology/api_key"
+  }
+
+  # SQS trigger
+  sqs_queue_arn = module.events_messaging.main_queue_arn
+  batch_size    = 5
+
   astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
+
+  # VPC Configuration: Using a private subnet + Bedrock VPC Endpoint SG
+  subnet_ids         = module.network_vpc.private_subnet_ids
+  security_group_ids = [module.bedrock_vpce.security_group_id]
 }
 
 output "worker_lambda_arn" {
