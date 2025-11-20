@@ -2,9 +2,13 @@ import Layout from "./Layout.jsx";
 
 import Landing from "./Landing";
 
-import Auth from "./Auth";
+import Onboarding from "./Onboarding";
+
+import FirstChat from "./FirstChat";
 
 import Chat from "./Chat";
+
+import Profile from "./Profile";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -12,9 +16,13 @@ const PAGES = {
     
     Landing: Landing,
     
-    Auth: Auth,
+    Onboarding: Onboarding,
+    
+    FirstChat: FirstChat,
     
     Chat: Chat,
+    
+    Profile: Profile,
     
 }
 
@@ -45,9 +53,13 @@ function PagesContent() {
                 
                 <Route path="/Landing" element={<Landing />} />
                 
-                <Route path="/Auth" element={<Auth />} />
+                <Route path="/Onboarding" element={<Onboarding />} />
+                
+                <Route path="/FirstChat" element={<FirstChat />} />
                 
                 <Route path="/Chat" element={<Chat />} />
+                
+                <Route path="/Profile" element={<Profile />} />
                 
             </Routes>
         </Layout>

@@ -1,224 +1,184 @@
-import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Sparkles, Calendar, Clock, MapPin, User } from "lucide-react";
-import { toast } from "sonner";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { format } from 'date-fns';
 
-export default function ProfileForm({ onComplete, editingProfile = null }) {
+const countries = [
+  'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 
+  'Italy', 'Spain', 'Japan', 'China', 'India', 'Brazil', 'Mexico', 'South Korea',
+  'Netherlands', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Switzerland', 'Other'
+];
+
+export default function ProfileForm({ onSubmit, user, initialData = null }) {
   const [formData, setFormData] = useState({
-    profile_name: editingProfile?.profile_name || "",
-    full_name: editingProfile?.full_name || "",
-    birth_date: editingProfile?.birth_date || "",
-    birth_time: editingProfile?.birth_time || "",
-    birth_place: editingProfile?.birth_place || "",
-    sun_sign: editingProfile?.sun_sign || "",
-    moon_sign: editingProfile?.moon_sign || "",
-    rising_sign: editingProfile?.rising_sign || "",
+    first_name: initialData?.first_name || '',
+    last_name: initialData?.last_name || '',
+    birth_date: initialData?.birth_date ? new Date(initialData.birth_date) : null,
+    birth_time: initialData?.birth_time || '',
+    birth_country: initialData?.birth_country || '',
+    birth_city: initialData?.birth_city || ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.profile_name || !formData.full_name || !formData.birth_date) {
-      toast.error("Please fill in all required fields");
+    setError('');
+
+    if (!formData.first_name || !formData.birth_date) {
+      setError('Please fill in all required fields');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (editingProfile) {
-        await base44.entities.Profile.update(editingProfile.id, formData);
-        toast.success("Profile updated successfully!");
-      } else {
-        const user = await base44.auth.me();
-        const existingProfiles = await base44.entities.Profile.filter({
-          created_by: user.email
-        });
-        
-        await base44.entities.Profile.create({
-          ...formData,
-          is_default: existingProfiles.length === 0
-        });
-        toast.success("Profile created successfully!");
-      }
-      
-      if (onComplete) onComplete();
-    } catch (error) {
-      toast.error("Failed to save profile");
-      console.error(error);
+      await onSubmit({
+        ...formData,
+        birth_date: format(formData.birth_date, 'yyyy-MM-dd')
+      });
+    } catch (err) {
+      setError('Failed to save profile. Please try again.');
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Night Sky Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[#0a0e27] via-[#16213e] to-[#0f1729]">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200')] opacity-30 bg-cover bg-center"></div>
-      </div>
-
-      {/* Glowing Orbs */}
-      <div className="fixed top-20 left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="fixed bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-6 py-12">
-        <div className="max-w-2xl w-full">
-          {/* Form Card */}
-          <div className="backdrop-blur-xl bg-white/5 rounded-3xl border border-white/10 shadow-2xl p-8 md:p-12">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 via-purple-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/50">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-2">
-                {editingProfile ? "Edit Your Profile" : "Create Your Astrological Profile"}
-              </h2>
-              <p className="text-white/60">
-                Help Mira understand your cosmic blueprint
-              </p>
+    <Card className="w-full max-w-2xl bg-white/10 backdrop-blur-md border-purple-400/30 shadow-2xl">
+      <CardHeader className="border-b border-purple-400/20">
+        <CardTitle className="text-2xl text-purple-100">Your Cosmic Profile</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name" className="text-purple-200">
+                First Name <span className="text-pink-400">*</span>
+              </Label>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                className="bg-white/10 border-purple-400/30 text-white placeholder:text-purple-300/50"
+                placeholder="Enter your first name"
+                required
+              />
             </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Profile Name */}
-              <div className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4">
-                <div className="flex items-center gap-2 text-white/80 mb-4">
-                  <User className="w-5 h-5 text-blue-400" />
-                  <span className="font-semibold">Profile Details</span>
-                </div>
-                
-                <div>
-                  <Label className="text-white/80 mb-2 block">Profile Name *</Label>
-                  <Input
-                    value={formData.profile_name}
-                    onChange={(e) => handleChange("profile_name", e.target.value)}
-                    placeholder="e.g., My Profile, John's Chart"
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-white/80 mb-2 block">Full Name *</Label>
-                  <Input
-                    value={formData.full_name}
-                    onChange={(e) => handleChange("full_name", e.target.value)}
-                    placeholder="Your full name"
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Birth Information */}
-              <div className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4">
-                <div className="flex items-center gap-2 text-white/80 mb-4">
-                  <Calendar className="w-5 h-5 text-purple-400" />
-                  <span className="font-semibold">Birth Information</span>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Birth Date *</Label>
-                    <Input
-                      type="date"
-                      value={formData.birth_date}
-                      onChange={(e) => handleChange("birth_date", e.target.value)}
-                      className="bg-white/5 border-white/20 text-white backdrop-blur-md focus:border-blue-400/50"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-white/80 mb-2 block flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Birth Time
-                    </Label>
-                    <Input
-                      type="time"
-                      value={formData.birth_time}
-                      onChange={(e) => handleChange("birth_time", e.target.value)}
-                      className="bg-white/5 border-white/20 text-white backdrop-blur-md focus:border-blue-400/50"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-white/80 mb-2 block flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Birth Place
-                  </Label>
-                  <Input
-                    value={formData.birth_place}
-                    onChange={(e) => handleChange("birth_place", e.target.value)}
-                    placeholder="City, Country"
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                  />
-                </div>
-              </div>
-
-              {/* Astrological Signs (Optional) */}
-              <div className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 p-6 space-y-4">
-                <div className="flex items-center gap-2 text-white/80 mb-4">
-                  <Sparkles className="w-5 h-5 text-indigo-400" />
-                  <span className="font-semibold">Astrological Signs (Optional)</span>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Sun Sign</Label>
-                    <Input
-                      value={formData.sun_sign}
-                      onChange={(e) => handleChange("sun_sign", e.target.value)}
-                      placeholder="e.g., Aries"
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Moon Sign</Label>
-                    <Input
-                      value={formData.moon_sign}
-                      onChange={(e) => handleChange("moon_sign", e.target.value)}
-                      placeholder="e.g., Leo"
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Rising Sign</Label>
-                    <Input
-                      value={formData.rising_sign}
-                      onChange={(e) => handleChange("rising_sign", e.target.value)}
-                      placeholder="e.g., Virgo"
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-md focus:border-blue-400/50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-700 text-white py-6 rounded-xl shadow-lg border border-white/20"
-              >
-                {isSubmitting ? "Saving..." : editingProfile ? "Update Profile" : "Create Profile"}
-              </Button>
-            </form>
+            <div className="space-y-2">
+              <Label htmlFor="last_name" className="text-purple-200">Last Name</Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                className="bg-white/10 border-purple-400/30 text-white placeholder:text-purple-300/50"
+                placeholder="Enter your last name"
+              />
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+
+          {/* Birth date */}
+          <div className="space-y-2">
+            <Label className="text-purple-200">
+              Birth Date <span className="text-pink-400">*</span>
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal bg-white/10 border-purple-400/30 text-white hover:bg-white/20"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-purple-300" />
+                  {formData.birth_date ? format(formData.birth_date, 'PPP') : 'Select your birth date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-slate-900 border-purple-400/30">
+                <Calendar
+                  mode="single"
+                  selected={formData.birth_date}
+                  onSelect={(date) => setFormData({ ...formData, birth_date: date })}
+                  initialFocus
+                  captionLayout="dropdown-buttons"
+                  fromYear={1900}
+                  toYear={new Date().getFullYear()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Birth time */}
+          <div className="space-y-2">
+            <Label htmlFor="birth_time" className="text-purple-200">
+              Birth Time (Optional but recommended for accuracy)
+            </Label>
+            <Input
+              id="birth_time"
+              type="time"
+              value={formData.birth_time}
+              onChange={(e) => setFormData({ ...formData, birth_time: e.target.value })}
+              className="bg-white/10 border-purple-400/30 text-white"
+            />
+          </div>
+
+          {/* Birth place */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-purple-200">Birth Country</Label>
+              <Select
+                value={formData.birth_country}
+                onValueChange={(value) => setFormData({ ...formData, birth_country: value })}
+              >
+                <SelectTrigger className="bg-white/10 border-purple-400/30 text-white">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-purple-400/30">
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country} className="text-white">
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="birth_city" className="text-purple-200">Birth City</Label>
+              <Input
+                id="birth_city"
+                value={formData.birth_city}
+                onChange={(e) => setFormData({ ...formData, birth_city: e.target.value })}
+                className="bg-white/10 border-purple-400/30 text-white placeholder:text-purple-300/50"
+                placeholder="Enter city name"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-pink-400 text-sm bg-pink-500/10 p-3 rounded-lg border border-pink-400/30">
+              {error}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-6 text-lg rounded-xl"
+          >
+            {isSubmitting ? (
+              'Saving...'
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                Continue to MIRA
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

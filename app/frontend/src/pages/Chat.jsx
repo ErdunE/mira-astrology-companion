@@ -1,126 +1,175 @@
-import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import ConversationList from "../components/chat/ConversationList";
-import MainPanel from "../components/chat/MainPanel";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import React, { useState, useEffect, useRef } from 'react';
+import { apiClient } from '@/api/apiClient';
+import { createPageUrl } from '../utils';
+import ChatSidebar from '../components/chat/ChatSidebar';
+import ChatArea from '../components/chat/ChatArea';
+import VisualizationArea from '../components/chat/VisualizationArea';
 
 export default function Chat() {
-  const navigate = useNavigate();
-  const [profiles, setProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [user, setUser] = useState(null);
   const [conversations, setConversations] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showMobileNav, setShowMobileNav] = useState(false);
+  const [currentConversation, setCurrentConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    loadData();
+    const init = async () => {
+      try {
+        const currentUser = await apiClient.auth.me();
+
+        // Check if user has profile
+        const profiles = await apiClient.entities.UserProfile.filter({
+          user_email: currentUser.email
+        });
+
+        if (profiles.length === 0) {
+          window.location.href = createPageUrl('Onboarding');
+          return;
+        }
+
+        setUser(profiles[0]); // Use profile instead of auth user
+
+        // Load conversations
+        const convos = await apiClient.agents.listConversations({
+          agent_name: 'mira'
+        });
+        setConversations(convos);
+
+        // Check for conversation ID in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const conversationId = urlParams.get('conversation');
+
+        if (conversationId) {
+          const convo = await apiClient.agents.getConversation(conversationId);
+          setCurrentConversation(convo);
+          setMessages(convo.messages || []);
+        } else if (convos.length > 0) {
+          // Load the most recent conversation
+          const latest = convos[0];
+          const convo = await apiClient.agents.getConversation(latest.id);
+          setCurrentConversation(convo);
+          setMessages(convo.messages || []);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.log('Backend not available - using mock data for development');
+        // If backend is not ready, use mock data for development
+        const devProfile = localStorage.getItem('dev_profile');
+        if (devProfile) {
+          setUser(JSON.parse(devProfile));
+        } else {
+          setUser({ first_name: 'User', user_email: 'user@example.com' });
+        }
+        
+        // Check for conversation ID in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const conversationId = urlParams.get('conversation');
+        
+        if (conversationId) {
+          setCurrentConversation({ 
+            id: conversationId, 
+            agent_name: 'mira',
+            messages: []
+          });
+        }
+        
+        setConversations([]);
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
-  const loadData = async () => {
-    try {
-      const user = await base44.auth.me();
-      const userProfiles = await base44.entities.Profile.filter({
-        created_by: user.email
-      });
-
-      if (userProfiles.length === 0) {
-        navigate(createPageUrl("Auth"));
-        return;
-      }
-
-      setProfiles(userProfiles);
-      
-      const defaultProfile = userProfiles.find(p => p.is_default) || userProfiles[0];
-      setSelectedProfile(defaultProfile);
-
-      const allConversations = await base44.entities.Conversation.list("-updated_date");
-      setConversations(allConversations);
-
-      if (allConversations.length > 0) {
-        setSelectedConversation(allConversations[0]);
-      }
-    } catch (error) {
-      console.error("Error loading data:", error);
+  useEffect(() => {
+    if (currentConversation) {
+      const unsubscribe = apiClient.agents.subscribeToConversation(
+        currentConversation.id,
+        (data) => {
+          setMessages(data.messages || []);
+        }
+      );
+      return () => unsubscribe();
     }
-    setIsLoading(false);
-  };
+  }, [currentConversation]);
 
   const handleNewChat = async () => {
-    if (!selectedProfile) return;
-    
     try {
-      const agentConversation = await base44.agents.createConversation({
-        agent_name: "mira",
-        metadata: {
-          profile_id: selectedProfile.id,
-          profile_name: selectedProfile.profile_name
-        }
+      const newConversation = await apiClient.agents.createConversation({
+        agent_name: 'mira',
+        metadata: { name: 'New Chat' }
       });
-
-      const conversation = await base44.entities.Conversation.create({
-        title: "New Reading",
-        profile_id: selectedProfile.id,
-        agent_conversation_id: agentConversation.id
+      
+      const convos = await apiClient.agents.listConversations({
+        agent_name: 'mira'
       });
-
-      setConversations(prev => [conversation, ...prev]);
-      setSelectedConversation(conversation);
+      setConversations(convos);
+      setCurrentConversation(newConversation);
+      setMessages([]);
+      
+      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + newConversation.id);
     } catch (error) {
-      console.error("Error creating chat:", error);
+      console.log('Backend not available - creating mock conversation');
+      // Create mock conversation for development
+      const mockConversation = {
+        id: 'dev-conversation-' + Date.now(),
+        agent_name: 'mira',
+        metadata: { name: 'New Chat' },
+        messages: []
+      };
+      setCurrentConversation(mockConversation);
+      setMessages([]);
+      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + mockConversation.id);
     }
   };
 
-  if (isLoading) {
+  const handleSelectConversation = async (conversation) => {
+    try {
+      const convo = await apiClient.agents.getConversation(conversation.id);
+      setCurrentConversation(convo);
+      setMessages(convo.messages || []);
+      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + conversation.id);
+    } catch (error) {
+      console.log('Backend not available');
+      setCurrentConversation(conversation);
+      setMessages([]);
+      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + conversation.id);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="h-screen bg-gradient-to-b from-[#0a0e27] via-[#16213e] to-[#0f1729] flex items-center justify-center">
-        <div className="text-white">Loading your cosmic journey...</div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-b from-[#0a0e27] via-[#16213e] to-[#0f1729] relative">
-      {/* Stars Background */}
-      <div className="fixed inset-0" style={{
-        backgroundImage: `radial-gradient(2px 2px at 20% 30%, white, transparent),
-                         radial-gradient(2px 2px at 60% 70%, white, transparent),
-                         radial-gradient(1px 1px at 50% 50%, white, transparent),
-                         radial-gradient(1px 1px at 80% 10%, white, transparent),
-                         radial-gradient(2px 2px at 90% 60%, white, transparent)`,
-        backgroundSize: '200px 200px, 300px 300px, 250px 250px, 400px 400px, 350px 350px',
-        backgroundRepeat: 'repeat',
-        opacity: 0.5
-      }}></div>
+    <div className="h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex overflow-hidden">
+      {/* Sidebar */}
+      <ChatSidebar
+        conversations={conversations}
+        currentConversation={currentConversation}
+        onSelectConversation={handleSelectConversation}
+        onNewChat={handleNewChat}
+        user={user}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+      />
 
-      {/* Glowing Orbs */}
-      <div className="fixed top-20 left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-      <div className="fixed bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      {/* Main chat area */}
+      <div className="flex-1 flex overflow-hidden">
+        <ChatArea
+          conversation={currentConversation}
+          messages={messages}
+          onNewChat={handleNewChat}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
 
-      <div className="relative z-10 h-full flex">
-        {/* Slim Conversation List - Left Sidebar */}
-        <div className={`${showMobileNav ? 'block' : 'hidden'} lg:block w-full lg:w-72 flex-shrink-0`}>
-          <ConversationList
-            profiles={profiles}
-            selectedProfile={selectedProfile}
-            onProfileChange={setSelectedProfile}
-            conversations={conversations}
-            selectedConversation={selectedConversation}
-            onConversationSelect={setSelectedConversation}
-            onNewChat={handleNewChat}
-            onRefresh={loadData}
-          />
-        </div>
-
-        {/* Main Panel - Takes up most of the screen */}
-        <div className="flex-1 min-w-0">
-          <MainPanel
-            conversation={selectedConversation}
-            profile={selectedProfile}
-            onToggleMobileNav={() => setShowMobileNav(!showMobileNav)}
-          />
-        </div>
+        {/* Visualization area */}
+        <VisualizationArea />
       </div>
     </div>
   );
