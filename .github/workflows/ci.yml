@@ -24,7 +24,10 @@ jobs:
           echo "-------------------------------------"
 
           if [ -z "$PR_BODY" ]; then
-            echo "PR body is empty. Template not filled."
+            echo "ERROR: PR body is empty"
+            echo ""
+            echo "Fix: Fill out the PR template with required sections"
+            echo "Template location: .github/pull_request_template.md"
             exit 1
           fi
 
@@ -33,16 +36,23 @@ jobs:
 
           for field in "${REQUIRED_FIELDS[@]}"; do
             if ! grep -q "$field" <<< "$PR_BODY"; then
-              echo "Missing section: $field"
+              echo "Missing required section: $field"
               MISSING=true
             fi
           done
 
           if [ "$MISSING" = true ]; then
-            echo "PR template not filled correctly."
+            echo ""
+            echo "Fix: Add all required sections to your PR description:"
+            echo "  - ## Summary"
+            echo "  - ## Linked Ticket"
+            echo "  - ## Changes"
+            echo "  - ## Testing"
+            echo ""
+            echo "See .github/pull_request_template.md for the complete template"
             exit 1
           else
-            echo "PR template looks good."
+            echo "PR template looks good"
           fi
 
   # 2. Backend Python Checks
@@ -87,42 +97,95 @@ jobs:
             echo "No Python files found. Skipping syntax check."
             exit 0
           fi
-          python -m py_compile $FILES
+          
+          if ! python -m py_compile $FILES; then
+            echo ""
+            echo "ERROR: Python syntax errors found"
+            echo ""
+            echo "Fix: Check the error messages above for specific syntax issues"
+            echo "Common issues:"
+            echo "  - Missing colons (:)"
+            echo "  - Incorrect indentation"
+            echo "  - Unclosed parentheses/brackets"
+            exit 1
+          fi
+          echo "Python syntax check passed"
 
       - name: Black Format Check
         if: steps.check_backend.outputs.exists == 'true'
         run: |
           echo "Checking code formatting with black..."
-          FILES="$(find app/backend -name '*.py' | grep -v venv | grep -v __pycache__)"
-          if [ -z "$FILES" ]; then
-            echo "No Python files to check. Skipping."
-            exit 0
+          
+          if ! black --check app/backend --exclude venv --line-length=120; then
+            echo ""
+            echo "ERROR: Code formatting issues found"
+            echo ""
+            echo "Fix: Run the following command to auto-format your code:"
+            echo "  cd app/backend"
+            echo "  black . --exclude venv --line-length=120"
+            echo "  git add ."
+            echo "  git commit --amend --no-edit"
+            echo "  git push --force-with-lease"
+            exit 1
           fi
-          black --check app/backend --exclude venv --line-length=120
+          echo "Code formatting is correct"
 
       - name: Flake8 Lint
         if: steps.check_backend.outputs.exists == 'true'
         run: |
-          echo "Running flake8..."
-          flake8 app/backend --exclude=venv --max-line-length=120 --ignore=E203,W503
+          echo "Running flake8 linting..."
+          
+          if ! flake8 app/backend --exclude=venv --max-line-length=120 --ignore=E203,W503; then
+            echo ""
+            echo "ERROR: Code style issues found"
+            echo ""
+            echo "Fix: Review the errors above and fix them manually, or:"
+            echo "  - For unused imports: Remove them"
+            echo "  - For unused variables: Remove or use them"
+            echo "  - For line length: Break long lines"
+            echo ""
+            echo "To check locally:"
+            echo "  cd app/backend"
+            echo "  flake8 . --exclude=venv --max-line-length=120 --ignore=E203,W503"
+            exit 1
+          fi
+          echo "Flake8 linting passed"
 
       - name: Run Backend Tests
         if: steps.check_backend.outputs.exists == 'true'
         run: |
           echo "Running backend tests..."
           cd app/backend
+          
           # Run api_wrapper tests
           if [ -f "common/api_wrapper.py" ]; then
             echo "Testing API wrapper..."
-            python common/api_wrapper.py
+            if ! python common/api_wrapper.py; then
+              echo ""
+              echo "ERROR: API wrapper tests failed"
+              echo ""
+              echo "Fix: Check the error messages above"
+              echo "Test locally: python app/backend/common/api_wrapper.py"
+              exit 1
+            fi
           fi
+          
           # Run pytest if test files exist
           if find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
             echo "Running pytest..."
-            pytest
+            if ! pytest; then
+              echo ""
+              echo "ERROR: Unit tests failed"
+              echo ""
+              echo "Fix: Check the error messages above"
+              echo "Test locally: cd app/backend && pytest"
+              exit 1
+            fi
           else
             echo "No pytest tests found. Skipping."
           fi
+          
+          echo "All backend tests passed"
 
   # 3. Frontend Checks
   frontend-build:
@@ -168,15 +231,48 @@ jobs:
         continue-on-error: true
         run: |
           cd app/frontend
-          npm run lint
+          echo "Running ESLint..."
+          
+          if ! npm run lint; then
+            echo ""
+            echo "WARNING: ESLint issues found (non-blocking)"
+            echo ""
+            echo "Fix: Review the linting errors above"
+            echo "Common fixes:"
+            echo "  - Remove unused imports/variables"
+            echo "  - Fix React Hook dependencies"
+            echo "  - Update eslint.config.js to adjust rules"
+            echo ""
+            echo "This check is non-blocking but should be addressed"
+          else
+            echo "ESLint check passed"
+          fi
 
       - name: Build Frontend
         if: steps.detect_pkg.outputs.found == 'true'
         run: |
           cd app/frontend
-          npm run build
+          echo "Building frontend..."
+          
+          if ! npm run build; then
+            echo ""
+            echo "ERROR: Frontend build failed"
+            echo ""
+            echo "Fix: Check the error messages above"
+            echo "Common issues:"
+            echo "  - TypeScript type errors"
+            echo "  - Missing dependencies"
+            echo "  - Syntax errors in JSX/TSX files"
+            echo ""
+            echo "Test locally:"
+            echo "  cd app/frontend"
+            echo "  npm install"
+            echo "  npm run build"
+            exit 1
+          fi
+          echo "Frontend build successful"
 
-  # 4. Terraform Validation (Enhanced)
+  # 4. Terraform Validation
   terraform-validate:
     name: Terraform Validate & Format
     runs-on: ubuntu-latest
@@ -185,11 +281,16 @@ jobs:
       - uses: actions/checkout@v3
 
       - id: check_tf
+        name: Check for Terraform files
         run: |
-          if ls infra/**/*.tf 1> /dev/null 2>&1; then
+          echo "Searching for .tf files in infra/..."
+          if find infra -name "*.tf" -type f | grep -q .; then
+            TF_COUNT=$(find infra -name "*.tf" -type f | wc -l)
             echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Found $TF_COUNT Terraform files"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No Terraform files found"
           fi
 
       - name: Install Terraform
@@ -201,19 +302,68 @@ jobs:
         run: |
           cd infra/terraform
           echo "Checking Terraform formatting..."
-          terraform fmt -check -recursive
+          
+          if ! terraform fmt -check -recursive; then
+            echo ""
+            echo "ERROR: Terraform files need formatting"
+            echo ""
+            echo "Fix: Run the following commands to auto-format:"
+            echo "  cd infra/terraform"
+            echo "  terraform fmt -recursive"
+            echo "  git add ."
+            echo "  git commit --amend --no-edit"
+            echo "  git push --force-with-lease"
+            echo ""
+            echo "Files needing formatting are listed above"
+            exit 1
+          fi
+          echo "✅ All Terraform files properly formatted"
 
       - name: Terraform Init
         if: steps.check_tf.outputs.exists == 'true'
         run: |
           cd infra/terraform
-          terraform init -backend=false
+          echo "Initializing Terraform..."
+          
+          if ! terraform init -backend=false; then
+            echo ""
+            echo "ERROR: Terraform initialization failed"
+            echo ""
+            echo "Common issues:"
+            echo "  - Invalid provider configuration"
+            echo "  - Missing required providers"
+            echo "  - Syntax errors in .tf files"
+            echo ""
+            echo "Test locally:"
+            echo "  cd infra/terraform"
+            echo "  terraform init -backend=false"
+            exit 1
+          fi
+          echo "Terraform initialized successfully"
 
       - name: Terraform Validate
         if: steps.check_tf.outputs.exists == 'true'
         run: |
           cd infra/terraform
-          terraform validate
+          echo "Validating Terraform configuration..."
+          
+          if ! terraform validate; then
+            echo ""
+            echo "ERROR: Terraform validation failed"
+            echo ""
+            echo "Common issues:"
+            echo "  - Missing required variables"
+            echo "  - Invalid resource references"
+            echo "  - Type mismatches"
+            echo "  - Circular dependencies"
+            echo ""
+            echo "Test locally:"
+            echo "  cd infra/terraform"
+            echo "  terraform init -backend=false"
+            echo "  terraform validate"
+            exit 1
+          fi
+          echo "Terraform configuration is valid"
 
   # 5. Security & Secrets Scan
   security-scan:
@@ -226,36 +376,69 @@ jobs:
         run: |
           echo "Scanning for AWS credentials..."
           if grep -R "AKIA[0-9A-Z]\{16\}" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist; then
-            echo "AWS Access Key detected!"
+            echo ""
+            echo "ERROR: AWS Access Key detected in code!"
+            echo ""
+            echo "Fix: Remove the AWS credentials from your code"
+            echo "  1. Find the file(s) listed above"
+            echo "  2. Remove the AKIA... key"
+            echo "  3. Use AWS Secrets Manager or environment variables instead"
+            echo "  4. Commit the change"
+            echo ""
+            echo "SECURITY RISK: Never commit AWS credentials to Git!"
             exit 1
           fi
-          echo "No AWS access keys found."
+          echo "No AWS access keys found"
 
       - name: Scan for Secret Keys
         run: |
           echo "Scanning for private keys..."
           if grep -R "BEGIN.*PRIVATE KEY" -n . --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=dist --exclude=ci.yml; then
-            echo "Private key detected!"
+            echo ""
+            echo "ERROR: Private key detected in code!"
+            echo ""
+            echo "Fix: Remove the private key from your code"
+            echo "  1. Find the file(s) listed above"
+            echo "  2. Remove the private key"
+            echo "  3. Store it securely in AWS Secrets Manager"
+            echo "  4. Add the file to .gitignore if it's a key file"
+            echo ""
+            echo "SECURITY RISK: Never commit private keys to Git!"
             exit 1
           fi
-          echo "No private keys found."
+          echo "No private keys found"
 
       - name: Check for Sensitive Files
         run: |
           echo "Checking for sensitive files..."
           SENSITIVE_PATTERNS=(".env" ".env.local" "*.pem" "*.key" "*.p12" "*.pfx")
           FOUND=false
+          FOUND_FILES=""
           
           for pattern in "${SENSITIVE_PATTERNS[@]}"; do
-            if find . -name "$pattern" -not -path "./node_modules/*" -not -path "./venv/*" -not -path "./dist/*" | grep -q .; then
+            FILES=$(find . -name "$pattern" -not -path "./node_modules/*" -not -path "./venv/*" -not -path "./dist/*")
+            if [ -n "$FILES" ]; then
               echo "Found sensitive file pattern: $pattern"
-              find . -name "$pattern" -not -path "./node_modules/*" -not -path "./venv/*" -not -path "./dist/*"
+              echo "$FILES"
               FOUND=true
+              FOUND_FILES="$FOUND_FILES\n$FILES"
             fi
           done
           
           if [ "$FOUND" = true ]; then
-            echo "Sensitive files detected! Please remove them or add to .gitignore"
+            echo ""
+            echo "ERROR: Sensitive files detected!"
+            echo ""
+            echo "Fix: Remove these files or add them to .gitignore"
+            echo "  1. Delete the files listed above (or move them outside the repo)"
+            echo "  2. Add patterns to .gitignore:"
+            echo "     .env"
+            echo "     .env.local"
+            echo "     *.pem"
+            echo "     *.key"
+            echo "  3. Commit the changes"
+            echo ""
+            echo "SECURITY RISK: Don't commit sensitive files to Git!"
             exit 1
           fi
-          echo "No sensitive files found."
+          echo "No sensitive files found"
