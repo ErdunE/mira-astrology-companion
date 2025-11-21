@@ -14,12 +14,11 @@ from botocore.exceptions import ClientError
 
 # Import common utilities
 import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # noqa: E402
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-from common.api_wrapper import api_handler
-from common.validators import validate_user_profile
-from common.zodiac import calculate_zodiac_sign
+from common.api_wrapper import api_handler  # noqa: E402
+from common.validators import validate_user_profile  # noqa: E402
+from common.zodiac import calculate_zodiac_sign  # noqa: E402
 
 # Setup logging
 logger = logging.getLogger()
@@ -131,7 +130,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         API Gateway response dict
     """
-    logger.info(f"Profile creation request received")
+    logger.info("Profile creation request received")
 
     # Extract user_id from JWT
     try:

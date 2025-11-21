@@ -365,7 +365,7 @@ if __name__ == "__main__":
 
     try:
         result = validate_user_profile(whitespace_location)
-        print(f"✓ Validation passed")
+        print("✓ Validation passed")
         print(f"  Location trimmed: '{result['birth_location']}'")
         print(f"  Country trimmed: '{result['birth_country']}'")
         assert result["birth_location"] == "New York"
