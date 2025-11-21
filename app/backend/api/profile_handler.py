@@ -14,7 +14,8 @@ from botocore.exceptions import ClientError
 
 # Import common utilities
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # noqa: E402
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))  # noqa: E402
 
 from common.api_wrapper import api_handler  # noqa: E402
 from common.validators import validate_user_profile  # noqa: E402
