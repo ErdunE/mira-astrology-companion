@@ -89,6 +89,18 @@ resource "aws_apigatewayv2_route" "profile" {
   authorization_scopes = []
 }
 
+## Profile (protected, POST)
+resource "aws_apigatewayv2_route" "profile_post" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "POST /profile"
+
+  target = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
 # Allow API Gateway to invoke Lambda
 resource "aws_lambda_permission" "apigw_invoke" {
   statement_id  = "AllowAPIGatewayInvoke"
