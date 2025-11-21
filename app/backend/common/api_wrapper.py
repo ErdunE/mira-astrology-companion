@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     # Mock context for testing
     class MockContext:
-        request_id = "test-request-123"
+        aws_request_id = "test-request-123"
 
     # Test 1: Successful request
     print("\n[Test 1] Successful POST request with body")

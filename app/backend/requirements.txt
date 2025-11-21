@@ -10,9 +10,12 @@ aws-lambda-powertools==2.31.0
 
 # Data validation library
 pydantic==2.5.0
+pydantic-core==2.14.1
 
 # JWT token processing for Cognito authentication
 PyJWT==2.8.0
 
 # Date and time utilities for birth date handling
 python-dateutil==2.8.2
+# Additional typing support for Pydantic
+typing-extensions==4.9.0
