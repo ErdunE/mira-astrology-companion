@@ -25,18 +25,20 @@ variable "logout_urls" {
 
 variable "supported_identity_providers" {
   type        = list(string)
+  description = "Supported identity providers for the app client"
   default     = ["COGNITO"]
-  description = "Identity providers supported by this client"
 }
 
 variable "allowed_oauth_flows" {
-  type    = list(string)
-  default = ["code"] # Authorization code flow
+  type        = list(string)
+  description = "OAuth flows enabled for the app client"
+  default     = ["implicit", "code"]
 }
 
 variable "allowed_oauth_scopes" {
-  type    = list(string)
-  default = ["openid", "email", "profile"]
+  type        = list(string)
+  description = "OAuth scopes for the app client"
+  default     = ["openid", "email", "profile"]
 }
 
 variable "tags" {
