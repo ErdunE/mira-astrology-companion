@@ -54,15 +54,25 @@ src/
 
 2. **Configure environment variables:**
    
-   Create a `.env` file in the root directory:
-   ```env
-   VITE_API_BASE_URL=https://your-aws-backend-url.com/api
+   Copy the example environment file and configure it:
+   ```bash
+   cp .env.example .env
    ```
    
-   Replace with your actual AWS backend URL. For local development:
+   Edit `.env` and fill in the required values:
    ```env
+   # API Gateway endpoint
    VITE_API_BASE_URL=http://localhost:3000/api
+   
+   # AWS Cognito configuration
+   VITE_AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+   VITE_AWS_COGNITO_CLIENT_ID=your-app-client-id
+   
+   # AWS Region
+   VITE_AWS_REGION=us-east-1
    ```
+   
+   📖 **For detailed setup instructions, see [ENV_SETUP.md](./ENV_SETUP.md)**
 
 3. **Start the development server:**
    ```bash
