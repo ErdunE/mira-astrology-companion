@@ -11,7 +11,9 @@ Short project summary (2–3 sentences).
 
 **Team Roles**
 Describe what role each team member will take in this project and the tasks assigned to each member. 
-> your answer
+> Erdun E: Project Manager, Backend Expert, Software developer
+> Raj Kavathekar: Senior Prompt Enginer, Frontend Expert, Web developer
+> Davie Wu: Site Reliability Engineer, Infrastructure Expert, Junior Developer
 
 --
 
@@ -20,12 +22,14 @@ Describe what role each team member will take in this project and the tasks assi
 Your repo must follow this layout:
 
 ```
+/.github/    # CICD, Pull request template
 /app/        # Application source code
 /data/       # Data plan, data requirements or scripts
 /infra/      # IaC (Terraform/SAM/etc)
 /docs/       # Architecture, ERD, progress report, budget
 /scripts/    # Optional bash scripts
 /roles/      # json policies to follow for IAM roles
+/.gitignore/ # Ignore the log, cache and other docs
 README.md    # Project overview and documentation
 ```
 
@@ -38,8 +42,12 @@ README.md    # Project overview and documentation
 A brief description/context of the problem you are approaching and problem understanding. 
 
 * Why is this topic relevant?
+  * AI emotional-support systems are increasingly important as users seek accessible, personalized guidance tools that are in compliance to mental health and user safety guardrails. The astrology aspect allows users to off-load some personal issues they face that are beyond their control, this allows them to reflect emotionally while having hard times be easy to swallow. The project explores how AI can deliver empathetic, context-aware responses while maintaining data security and reliability on the cloud.
 * Who does this topic affect? Where does it happen? When did it happen?
+  * This application primarily benefits individuals seeking lightweight emotional support or personal reflection in their daily lives. It is designed for users who follow horoscopes and want an interactive, AI-driven experience. 
+  * Mira is relevant in everyday contexts where users want brief, private, and accessible emotional support and especially during stressful or uncertain moments. It is globally applicable and always available, leveraging cloud scalability to ensure 24/7 access across time zones and devices.
 * What are your motivations for addressing this topic?
+  * Our team is interested in building AI chatbots and exploring how to host both the frontend and backend fully on the cloud. We’re curious about how an AI chatbot can interpret horoscope and astrology data to offer emotional support and real-time guidance to users. This project lets us combine technical exploration with a topic that feels engaging and personally meaningful.
 
 
 **Proposed Solution:**  
