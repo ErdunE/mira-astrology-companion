@@ -7,9 +7,11 @@
  * - Handling OAuth callback and token extraction
  * - Storing and managing JWT tokens
  * - Token validation and user info extraction
+ * 
+ * Note: We don't use amazon-cognito-identity-js because we're using Hosted UI OAuth flow,
+ * not the SDK's direct authentication methods.
  */
 
-import { CognitoUserPool, CognitoUser } from 'amazon-cognito-identity-js';
 import config from '../config/env.js';
 
 // Storage keys
