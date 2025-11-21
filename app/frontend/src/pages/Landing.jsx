@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { apiClient } from '@/api/apiClient';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Moon, Star } from 'lucide-react';
-import { createPageUrl } from '../utils';
+import { Sparkles, Moon, Star, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Landing() {
+  const navigate = useNavigate();
+  const { isAuthenticated, login, user } = useAuth();
+  
+  // If user is already authenticated, redirect to onboarding
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('User already authenticated, redirecting to onboarding...');
+      navigate('/onboarding');
+    }
+  }, [isAuthenticated, navigate]);
 
-
-
-  const handleSignIn = async () => {
-    // Redirect to login/signup page
-    // TODO: Implement your own auth flow here
-    window.location.href = createPageUrl('Onboarding');
+  const handleSignIn = () => {
+    // Redirect to Cognito Hosted UI for login
+    login();
   };
 
   return (

@@ -10,7 +10,11 @@ import Chat from "./Chat";
 
 import Profile from "./Profile";
 
+import Callback from "./Callback";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { AuthProvider } from '../contexts/AuthContext';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 const PAGES = {
     
@@ -23,6 +27,8 @@ const PAGES = {
     Chat: Chat,
     
     Profile: Profile,
+    
+    Callback: Callback,
     
 }
 
@@ -53,13 +59,15 @@ function PagesContent() {
                 
                 <Route path="/Landing" element={<Landing />} />
                 
-                <Route path="/Onboarding" element={<Onboarding />} />
+                <Route path="/Onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                 
-                <Route path="/FirstChat" element={<FirstChat />} />
+                <Route path="/FirstChat" element={<ProtectedRoute><FirstChat /></ProtectedRoute>} />
                 
-                <Route path="/Chat" element={<Chat />} />
+                <Route path="/Chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
                 
-                <Route path="/Profile" element={<Profile />} />
+                <Route path="/Profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                
+                <Route path="/Callback" element={<Callback />} />
                 
             </Routes>
         </Layout>
@@ -69,7 +77,9 @@ function PagesContent() {
 export default function Pages() {
     return (
         <Router>
-            <PagesContent />
+            <AuthProvider>
+                <PagesContent />
+            </AuthProvider>
         </Router>
     );
 }
