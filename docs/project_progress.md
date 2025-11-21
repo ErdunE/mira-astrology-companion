@@ -4,7 +4,7 @@ In this markdown you should explain the following subsections in detail.
 
 **Changes made since the Project Proposal**
 > We made three key technical decisions after the initial proposal:  
-> AI Service: Switched from Hugging Face to Amazon Bedrock for better AWS integration and multi-model flexibility. Bedrock provides native access to Claude and other models, simplifying our > serverless architecture.  
+> AI Service: Switched from OpenAI API to Amazon Bedrock for better AWS integration and multi-model flexibility. Bedrock provides native access to Claude and other models, simplifying our > serverless architecture.  
 > Security Architecture: Added VPC with PrivateLink endpoints to protect sensitive user data. Lambda functions now run in private subnets and access AWS services through VPC endpoints instead of public internet, enhancing data privacy.  
 > Performance Optimization: Designed caching mechanism (30-day TTL) for astrology charts to reduce external API costs and improve response times. Also added async processing infrastructure (SQS + EventBridge) for long-running tasks. Infrastructure is deployed; business logic implementation is ongoing.  
 > Astrology API: Selected the specific Astrologer API (https://github.com/g-battaglia/Astrologer-API) which provides comprehensive birth chart generation with SVG visualization.  
