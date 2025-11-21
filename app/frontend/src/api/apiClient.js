@@ -1,5 +1,7 @@
-// API Client - Replace BASE_URL with your AWS backend URL
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// API Client - Configured via environment variables
+import config from '../config/env.js';
+
+const BASE_URL = config.api.baseUrl;
 
 class ApiClient {
   constructor() {
@@ -135,7 +137,8 @@ class ApiClient {
     subscribeToConversation: (conversationId, callback) => {
       // WebSocket or SSE connection for real-time updates
       // This is a placeholder - implement based on your AWS backend setup
-      const ws = new WebSocket(`${BASE_URL.replace('http', 'ws')}/conversations/${conversationId}/subscribe`);
+      const wsUrl = config.api.websocketUrl || BASE_URL.replace('http', 'ws');
+      const ws = new WebSocket(`${wsUrl}/conversations/${conversationId}/subscribe`);
       
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
