@@ -75,6 +75,8 @@ if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt \
         -t "$DIST_DIR/" \
         --platform manylinux2014_x86_64 \
+        --python-version 3.10 \
+        --implementation cp \
         --only-binary=:all: \
         --quiet
     print_success "Dependencies installed"
