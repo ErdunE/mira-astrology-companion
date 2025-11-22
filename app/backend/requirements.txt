@@ -17,5 +17,9 @@ PyJWT==2.8.0
 
 # Date and time utilities for birth date handling
 python-dateutil==2.8.2
+
 # Additional typing support for Pydantic
 typing-extensions==4.9.0
+
+# Country code conversion
+pycountry==24.6.1
