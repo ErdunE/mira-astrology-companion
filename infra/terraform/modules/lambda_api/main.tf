@@ -44,6 +44,26 @@ resource "aws_iam_role_policy" "logs_basic" {
   policy = data.aws_iam_policy_document.logs_basic.json
 }
 
+# ----- EC2 networking permissions for VPC Lambda -----
+data "aws_iam_policy_document" "vpc_networking" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:CreateNetworkInterface",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DeleteNetworkInterface",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "vpc_networking" {
+  name   = "${var.name_prefix}-${var.function_name}-vpc-networking"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.vpc_networking.json
+}
+
+
 # ----- Secrets Manager permission for Astrologer API key -----
 
 data "aws_iam_policy_document" "secrets_astrologer" {
