@@ -112,6 +112,27 @@ resource "aws_iam_role_policy" "dynamodb_userprofiles" {
   policy = data.aws_iam_policy_document.dynamodb_userprofiles.json
 }
 
+# ----- Bedrock invoke permissions -----
+
+data "aws_iam_policy_document" "bedrock_invoke" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+
+    resources = var.bedrock_model_arns
+  }
+}
+
+resource "aws_iam_role_policy" "bedrock_invoke" {
+  name   = "${var.name_prefix}-${var.function_name}-bedrock"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.bedrock_invoke.json
+}
+
 
 # Package from source_dir
 data "archive_file" "lambda_zip" {
