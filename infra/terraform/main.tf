@@ -167,8 +167,8 @@ module "api_lambda" {
     DYNAMODB_PROFILES_TABLE      = module.dynamodb_mira.user_profiles_table_name
     DYNAMODB_CONVERSATIONS_TABLE = module.dynamodb_mira.conversations_table_name
     ASTROLOGY_SECRET_NAME        = "/mira/astrology/api_key"
-
-    GEONAMES_USERNAME = "DavieWu"
+    S3_CHARTS_BUCKET             = module.s3_static.artifacts_bucket_name
+    GEONAMES_USERNAME            = "DavieWu"
   }
 
   astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
