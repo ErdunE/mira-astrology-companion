@@ -84,3 +84,12 @@ variable "dynamodb_userprofiles_arn" {
   type        = string
   description = "ARN of DynamoDB UserProfiles table"
 }
+
+variable "bedrock_model_arns" {
+  type        = list(string)
+  description = "ARNs of Bedrock models that this Lambda is allowed to invoke"
+  # A broad default value to facilitate backend debugging, and then tighten it to a specific model later.
+  default = [
+    "arn:aws:bedrock:us-east-1::foundation-model/*"
+  ]
+}
