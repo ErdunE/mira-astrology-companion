@@ -182,6 +182,8 @@ module "api_lambda" {
   bedrock_model_arns = [
     "arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-oss-20b-1:0"
   ]
+
+  s3_charts_bucket_name = module.s3_static.artifacts_bucket_name
 }
 
 

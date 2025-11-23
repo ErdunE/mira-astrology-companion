@@ -93,3 +93,8 @@ variable "bedrock_model_arns" {
     "arn:aws:bedrock:us-east-1::foundation-model/*"
   ]
 }
+
+variable "s3_charts_bucket_name" {
+  type        = string
+  description = "S3 bucket name used to store generated charts"
+}

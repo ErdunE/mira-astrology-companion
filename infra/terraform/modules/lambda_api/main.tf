@@ -133,6 +133,42 @@ resource "aws_iam_role_policy" "bedrock_invoke" {
   policy = data.aws_iam_policy_document.bedrock_invoke.json
 }
 
+# ----- S3 permissions for charts bucket (artifacts/charts/*) -----
+
+data "aws_iam_policy_document" "s3_charts" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+    ]
+
+    resources = [
+      "arn:aws:s3:::${var.s3_charts_bucket_name}/charts/*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:ListBucket",
+    ]
+
+    resources = [
+      "arn:aws:s3:::${var.s3_charts_bucket_name}"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "s3_charts" {
+  name   = "${var.name_prefix}-${var.function_name}-s3-charts"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.s3_charts.json
+}
+
 
 # Package from source_dir
 data "archive_file" "lambda_zip" {
