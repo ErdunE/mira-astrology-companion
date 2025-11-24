@@ -85,6 +85,12 @@ variable "dynamodb_userprofiles_arn" {
   description = "ARN of DynamoDB UserProfiles table"
 }
 
+variable "dynamodb_conversations_arn" {
+  type        = string
+  description = "ARN of DynamoDB Conversations table"
+}
+
+
 variable "bedrock_model_arns" {
   type        = list(string)
   description = "ARNs of Bedrock models that this Lambda is allowed to invoke"
@@ -92,4 +98,9 @@ variable "bedrock_model_arns" {
   default = [
     "arn:aws:bedrock:us-east-1::foundation-model/*"
   ]
+}
+
+variable "s3_charts_bucket_name" {
+  type        = string
+  description = "S3 bucket name used to store generated charts"
 }

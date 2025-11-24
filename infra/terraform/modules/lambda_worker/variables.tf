@@ -77,3 +77,9 @@ variable "maximum_batching_window_in_seconds" {
 variable "astrologer_api_secret_arn" {
   type = string
 }
+
+variable "dynamodb_conversations_arn" {
+  type        = string
+  description = "ARN of DynamoDB Conversations table"
+}
+

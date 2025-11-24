@@ -112,6 +112,33 @@ resource "aws_iam_role_policy" "dynamodb_userprofiles" {
   policy = data.aws_iam_policy_document.dynamodb_userprofiles.json
 }
 
+# ----- DynamoDB permission for Conversations table -----
+
+data "aws_iam_policy_document" "dynamodb_conversations" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:GetItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+
+    resources = [
+      var.dynamodb_conversations_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "dynamodb_conversations" {
+  name   = "${var.name_prefix}-${var.function_name}-dynamodb-conversations"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.dynamodb_conversations.json
+}
+
 # ----- Bedrock invoke permissions -----
 
 data "aws_iam_policy_document" "bedrock_invoke" {
@@ -131,6 +158,42 @@ resource "aws_iam_role_policy" "bedrock_invoke" {
   name   = "${var.name_prefix}-${var.function_name}-bedrock"
   role   = aws_iam_role.lambda_role.id
   policy = data.aws_iam_policy_document.bedrock_invoke.json
+}
+
+# ----- S3 permissions for charts bucket (artifacts/charts/*) -----
+
+data "aws_iam_policy_document" "s3_charts" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+    ]
+
+    resources = [
+      "arn:aws:s3:::${var.s3_charts_bucket_name}/charts/*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:ListBucket",
+    ]
+
+    resources = [
+      "arn:aws:s3:::${var.s3_charts_bucket_name}"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "s3_charts" {
+  name   = "${var.name_prefix}-${var.function_name}-s3-charts"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.s3_charts.json
 }
 
 

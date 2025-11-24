@@ -160,20 +160,21 @@ module "api_lambda" {
 
   source_dir  = "${path.root}/lambda_src/api"
   memory_size = 256
-  timeout     = 10
+  timeout     = 60
 
   environment_variables = {
     STAGE                        = "dev"
     DYNAMODB_PROFILES_TABLE      = module.dynamodb_mira.user_profiles_table_name
     DYNAMODB_CONVERSATIONS_TABLE = module.dynamodb_mira.conversations_table_name
     ASTROLOGY_SECRET_NAME        = "/mira/astrology/api_key"
-
-    GEONAMES_USERNAME = "DavieWu"
+    S3_CHARTS_BUCKET             = module.s3_static.artifacts_bucket_name
+    GEONAMES_USERNAME            = "DavieWu"
   }
 
   astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
 
-  dynamodb_userprofiles_arn = module.dynamodb_mira.user_profiles_table_arn
+  dynamodb_userprofiles_arn  = module.dynamodb_mira.user_profiles_table_arn
+  dynamodb_conversations_arn = module.dynamodb_mira.conversations_table_arn
 
   subnet_ids         = module.network_vpc.private_subnet_ids
   security_group_ids = [module.bedrock_vpce.security_group_id]
@@ -182,6 +183,8 @@ module "api_lambda" {
   bedrock_model_arns = [
     "arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-oss-20b-1:0"
   ]
+
+  s3_charts_bucket_name = module.s3_static.artifacts_bucket_name
 }
 
 
@@ -203,6 +206,8 @@ module "worker_lambda" {
 
     ASTROLOGY_SECRET_NAME = "/mira/astrology/api_key"
   }
+
+  dynamodb_conversations_arn = module.dynamodb_mira.conversations_table_arn
 
   # SQS trigger
   sqs_queue_arn = module.events_messaging.main_queue_arn
