@@ -5,6 +5,7 @@ Routes requests to appropriate endpoint handlers.
 
 from api.health_handler import lambda_handler as health_handler
 from api.profile_handler import lambda_handler as profile_handler
+from api.chat_handler import lambda_handler as chat_handler
 
 
 def lambda_handler(event, context):
@@ -14,6 +15,7 @@ def lambda_handler(event, context):
     Supported routes:
     - GET  /health  -> Health check endpoint
     - POST /profile -> User profile creation endpoint
+    - POST /chat    -> Chat conversation endpoint
     """
     # Get path and HTTP method from event (HTTP API v2.0 format)
     raw_path = event.get("rawPath", "")
@@ -32,6 +34,17 @@ def lambda_handler(event, context):
                 "statusCode": 405,
                 "headers": {"Content-Type": "application/json", "Allow": "POST"},
                 "body": '{"error": "Method not allowed", "message": "Only POST is supported for /profile"}',
+            }
+
+    elif raw_path == "/chat" or raw_path == "/default/chat":
+        # Chat endpoint only accepts POST
+        if http_method == "POST":
+            return chat_handler(event, context)
+        else:
+            return {
+                "statusCode": 405,
+                "headers": {"Content-Type": "application/json", "Allow": "POST"},
+                "body": '{"error": "Method not allowed", "message": "Only POST is supported for /chat"}',
             }
 
     # Default 404 response

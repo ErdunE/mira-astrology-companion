@@ -5,6 +5,7 @@ Uses OpenAI GPT model via Amazon Bedrock with VPC PrivateLink.
 
 import json
 import logging
+import time
 from typing import Any, Dict
 
 import boto3
@@ -97,15 +98,22 @@ class BedrockClient:
             raise BedrockError(message="Failed to build AI prompt", original_error=str(e))
 
         # Build request payload (OpenAI format)
-        request_body = {
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
+        request_body = {"messages": messages, "max_tokens": max_tokens, "temperature": temperature}
+
+        messages_str = json.dumps(messages)
+        logger.info(f"Prompt size: {len(messages_str)} chars")
 
         # Call Bedrock
         try:
-            logger.info(f"Invoking Bedrock model: {self.model_id}")
+            logger.info("=" * 60)
+            logger.info("BEDROCK REQUEST DEBUG")
+            logger.info(f"Model: {self.model_id}")
+            logger.info(f"Request size: {len(json.dumps(request_body))} bytes")
+            logger.info(f"Full request: {json.dumps(request_body)[:2000]}...")
+            logger.info("=" * 60)
+
+            start_time = time.time()
+            logger.info(f"Calling invoke_model at {start_time}")
 
             response = self.client.invoke_model(
                 modelId=self.model_id,
@@ -114,8 +122,20 @@ class BedrockClient:
                 accept="application/json",
             )
 
+            end_time = time.time()
+            duration = end_time - start_time
+
+            logger.info(f"invoke_model returned at {end_time}")
+            logger.info(f"Duration: {duration:.2f} seconds")
+            logger.info("=" * 60)
+            logger.info("BEDROCK RESPONSE DEBUG")
+            logger.info(f"HTTP Status: {response['ResponseMetadata']['HTTPStatusCode']}")
+            logger.info(f"Request ID: {response['ResponseMetadata']['RequestId']}")
+            logger.info("=" * 60)
+
             # Parse response
             response_body = json.loads(response["body"].read())
+            logger.info(f"Response keys: {list(response_body.keys())}")
             logger.info("Bedrock response received successfully")
 
             return self._parse_response(response_body)
@@ -123,11 +143,21 @@ class BedrockClient:
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
-            logger.error(f"Bedrock API error: {error_code} - {error_message}")
+            logger.error("=" * 60)
+            logger.error("BEDROCK CLIENT ERROR")
+            logger.error(f"Error code: {error_code}")
+            logger.error(f"Error message: {error_message}")
+            logger.error(f"Full response: {e.response}")
+            logger.error("=" * 60)
             raise BedrockError(message="Bedrock API call failed", error_code=error_code, original_error=error_message)
 
         except Exception as e:
-            logger.error(f"Unexpected error calling Bedrock: {e}", exc_info=True)
+            logger.error("=" * 60)
+            logger.error("BEDROCK UNEXPECTED ERROR")
+            logger.error(f"Type: {type(e).__name__}")
+            logger.error(f"Message: {str(e)}")
+            logger.error("=" * 60)
+            logger.error("Full traceback:", exc_info=True)
             raise BedrockError(message="Unexpected error during AI generation", original_error=str(e))
 
     def _build_messages(self, user_profile: Dict[str, Any], chart_data: Dict[str, Any], user_question: str) -> list:
@@ -170,33 +200,65 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
     def _format_user_context(self, user_profile: Dict[str, Any], chart_data: Dict[str, Any]) -> str:
         """
         Format user profile and chart data into readable context.
+        OPTIMIZED VERSION - Only includes key astrological information.
 
         Args:
             user_profile: User profile dict
             chart_data: Chart data from Astrologer API
 
         Returns:
-            Formatted context string
+            Formatted context string (optimized for token efficiency)
         """
         # Extract user profile info
         zodiac_sign = user_profile.get("zodiac_sign", "Unknown")
         birth_date = user_profile.get("birth_date", "Unknown")
         birth_location = user_profile.get("birth_location", "Unknown")
 
-        # Format chart data (complete version for now)
-        # Include all available astrological information
-        chart_summary = json.dumps(chart_data.get("data", {}), indent=2)
+        # Extract KEY planets only
+        chart_planets = chart_data.get("data", {})
+        key_planets = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "ascendant", "medium_coeli"]
 
+        planets_summary = []
+        for planet in key_planets:
+            if planet in chart_planets:
+                planet_data = chart_planets[planet]
+                name = planet_data.get("name", planet.title())
+                sign = planet_data.get("sign", "Unknown")
+                position = planet_data.get("position", 0)
+                house = planet_data.get("house", "")
+                retrograde = " (R)" if planet_data.get("retrograde", False) else ""
+                
+                planets_summary.append(f"  {name}: {sign} {position:.1f}°{retrograde}")
+
+        # Extract MAJOR aspects only
+        all_aspects = chart_data.get("aspects", [])
+        important_aspect_types = ["conjunction", "opposition", "trine", "square", "sextile"]
+        key_planets_for_aspects = ["Sun", "Moon", "Ascendant", "Mercury", "Venus", "Mars"]
+
+        major_aspects = []
+        for aspect in all_aspects[:20]:
+            aspect_type = aspect.get("aspect", "").lower()
+            planet1 = aspect.get("p1_name", "") 
+            planet2 = aspect.get("p2_name", "")
+            
+            if aspect_type in important_aspect_types:
+                if planet1 in key_planets_for_aspects or planet2 in key_planets_for_aspects:
+                    orb = aspect.get("orbit", 0)  
+                    major_aspects.append(f"  {planet1} {aspect_type} {planet2} (orb: {orb:.1f}°)")
+                    if len(major_aspects) >= 10:
+                        break
+
+        # Build concise context
         context = f"""User Profile:
 - Zodiac Sign: {zodiac_sign}
 - Birth Date: {birth_date}
 - Birth Location: {birth_location}
 
-Birth Chart Data:
-{chart_summary}
+Key Planetary Positions:
+{chr(10).join(planets_summary) if planets_summary else '  (No planetary data available)'}
 
-Aspects:
-{json.dumps(chart_data.get("aspects", []), indent=2)}
+Major Aspects:
+{chr(10).join(major_aspects) if major_aspects else '  (No major aspects found)'}
 """
 
         return context
@@ -211,19 +273,13 @@ Aspects:
         Returns:
             Dict with response text, usage stats, and metadata
         """
-        # OpenAI response format
-        # {"choices": [{"message": {"content": "..."}}], "usage": {...}}
-
         try:
             ai_message = response_body["choices"][0]["message"]["content"]
             usage = response_body.get("usage", {})
 
             return {
                 "response": ai_message,
-                "usage": {
-                    "input_tokens": usage.get("prompt_tokens", 0),
-                    "output_tokens": usage.get("completion_tokens", 0),
-                },
+                "usage": {"input_tokens": usage.get("prompt_tokens", 0), "output_tokens": usage.get("completion_tokens", 0)},
                 "model": self.model_id,
             }
 
@@ -241,10 +297,7 @@ if __name__ == "__main__":
     print("\n[Test Setup]")
     print("-" * 70)
     print("Ensure AWS credentials are configured")
-    print("  - aws configure")
-    print("  - export AWS_DEFAULT_REGION=us-east-1")
 
-    # Initialize client
     try:
         client = BedrockClient()
         print("\n✓ Bedrock client initialized successfully")
@@ -252,7 +305,7 @@ if __name__ == "__main__":
         print(f"\n✗ Failed to initialize client: {e}")
         exit(1)
 
-    # Test data
+    # Test with simple data
     test_profile = {
         "zodiac_sign": "Capricorn",
         "birth_date": "1990-01-15",
@@ -286,9 +339,10 @@ if __name__ == "__main__":
         print("\n✓ AI response generated successfully!")
         print(f"\nResponse ({len(result['response'])} chars):")
         print("-" * 70)
-        print(result["response"])
+        print(result["response"][:500])
+        print("...")
         print("-" * 70)
-        print("\nUsage:")
+        print(f"\nUsage:")
         print(f"  Input tokens: {result['usage']['input_tokens']}")
         print(f"  Output tokens: {result['usage']['output_tokens']}")
         print(f"  Model: {result['model']}")
