@@ -65,3 +65,15 @@ logs/
 .idea/
 *.swp
 *.swo
+
+### Lambda Deployment ###
+lambda-api.zip
+*.zip
+
+### Test Files ###
+response.json
+
+### Tokens and Credentials ###
+token.txt
+*.pem
+EOF
