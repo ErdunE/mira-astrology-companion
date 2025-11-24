@@ -1,5 +1,6 @@
 output "function_name" {
-  value = local.fn_name
+  description = "Lambda function name for API handler"
+  value       = local.fn_name
 }
 
 output "function_arn" {
