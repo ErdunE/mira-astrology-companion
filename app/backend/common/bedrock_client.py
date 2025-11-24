@@ -225,7 +225,6 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
                 name = planet_data.get("name", planet.title())
                 sign = planet_data.get("sign", "Unknown")
                 position = planet_data.get("position", 0)
-                house = planet_data.get("house", "")
                 retrograde = " (R)" if planet_data.get("retrograde", False) else ""
 
                 planets_summary.append(f"  {name}: {sign} {position:.1f}°{retrograde}")
@@ -345,7 +344,7 @@ if __name__ == "__main__":
         print(result["response"][:500])
         print("...")
         print("-" * 70)
-        print(f"\nUsage:")
+        print("\nUsage:")
         print(f"  Input tokens: {result['usage']['input_tokens']}")
         print(f"  Output tokens: {result['usage']['output_tokens']}")
         print(f"  Model: {result['model']}")
