@@ -93,6 +93,32 @@ resource "aws_iam_role_policy" "secrets_astrologer" {
   policy = data.aws_iam_policy_document.secrets_astrologer.json
 }
 
+# ----- DynamoDB permission for Conversations table -----
+
+data "aws_iam_policy_document" "dynamodb_conversations" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:GetItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+
+    resources = [
+      var.dynamodb_conversations_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "dynamodb_conversations" {
+  name   = "${var.name_prefix}-${var.function_name}-dynamodb-conversations"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.dynamodb_conversations.json
+}
 
 # Package from source_dir
 data "archive_file" "lambda_zip" {

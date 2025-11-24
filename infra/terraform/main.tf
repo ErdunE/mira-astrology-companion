@@ -173,7 +173,8 @@ module "api_lambda" {
 
   astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
 
-  dynamodb_userprofiles_arn = module.dynamodb_mira.user_profiles_table_arn
+  dynamodb_userprofiles_arn  = module.dynamodb_mira.user_profiles_table_arn
+  dynamodb_conversations_arn = module.dynamodb_mira.conversations_table_arn
 
   subnet_ids         = module.network_vpc.private_subnet_ids
   security_group_ids = [module.bedrock_vpce.security_group_id]
@@ -205,6 +206,8 @@ module "worker_lambda" {
 
     ASTROLOGY_SECRET_NAME = "/mira/astrology/api_key"
   }
+
+  dynamodb_conversations_arn = module.dynamodb_mira.conversations_table_arn
 
   # SQS trigger
   sqs_queue_arn = module.events_messaging.main_queue_arn
