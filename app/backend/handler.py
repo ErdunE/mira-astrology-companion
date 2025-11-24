@@ -36,11 +36,11 @@ def lambda_handler(event, context):
             client = BedrockClient()
 
             # Make minimal Bedrock call to keep connection alive
-            test_result = client.generate_response(
+            client.generate_response(
                 user_profile={"zodiac_sign": "Aries", "birth_date": "2000-01-01", "birth_location": "Test"},
                 chart_data={"data": {}, "aspects": []},
                 user_question="warmup",
-                max_tokens=10,  # Minimal tokens to reduce cost
+                max_tokens=10,
             )
 
             logger.info("Bedrock connection warmed successfully")
