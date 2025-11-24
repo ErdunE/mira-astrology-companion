@@ -160,7 +160,7 @@ module "api_lambda" {
 
   source_dir  = "${path.root}/lambda_src/api"
   memory_size = 256
-  timeout     = 30
+  timeout     = 60
 
   environment_variables = {
     STAGE                        = "dev"
