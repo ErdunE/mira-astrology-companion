@@ -219,7 +219,9 @@ def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[O
         chart_url = f"https://{CHARTS_BUCKET}.s3.amazonaws.com/{chart_s3_path}"
 
         logger.info(f"Cached chart data type: {type(cached_chart_data)}")
-        logger.info(f"Cached chart keys: {list(cached_chart_data.keys()) if isinstance(cached_chart_data, dict) else 'N/A'}")
+        logger.info(
+            f"Cached chart keys: {list(cached_chart_data.keys()) if isinstance(cached_chart_data, dict) else 'N/A'}"
+        )
         logger.info(f"Chart data sample: {json.dumps(cached_chart_data, default=str)[:500]}...")
 
         return cached_chart_data, chart_url, True
@@ -268,7 +270,12 @@ def update_profile_with_chart(user_id: str, s3_path: str, timestamp: int, chart_
                 "SET chart_s3_path = :path, chart_generated_at = :ts, "
                 "chart_data_cached = :data, updated_at = :updated"
             ),
-            ExpressionAttributeValues={":path": s3_path, ":ts": timestamp, ":data": chart_data_str, ":updated": timestamp},
+            ExpressionAttributeValues={
+                ":path": s3_path,
+                ":ts": timestamp,
+                ":data": chart_data_str,
+                ":updated": timestamp,
+            },
         )
         logger.info(f"Profile updated with chart metadata for user: {user_id}")
     except ClientError as e:

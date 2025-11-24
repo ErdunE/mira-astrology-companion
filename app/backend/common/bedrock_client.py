@@ -227,7 +227,7 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
                 position = planet_data.get("position", 0)
                 house = planet_data.get("house", "")
                 retrograde = " (R)" if planet_data.get("retrograde", False) else ""
-                
+
                 planets_summary.append(f"  {name}: {sign} {position:.1f}°{retrograde}")
 
         # Extract MAJOR aspects only
@@ -238,12 +238,12 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
         major_aspects = []
         for aspect in all_aspects[:20]:
             aspect_type = aspect.get("aspect", "").lower()
-            planet1 = aspect.get("p1_name", "") 
+            planet1 = aspect.get("p1_name", "")
             planet2 = aspect.get("p2_name", "")
-            
+
             if aspect_type in important_aspect_types:
                 if planet1 in key_planets_for_aspects or planet2 in key_planets_for_aspects:
-                    orb = aspect.get("orbit", 0)  
+                    orb = aspect.get("orbit", 0)
                     major_aspects.append(f"  {planet1} {aspect_type} {planet2} (orb: {orb:.1f}°)")
                     if len(major_aspects) >= 10:
                         break
@@ -279,7 +279,10 @@ Major Aspects:
 
             return {
                 "response": ai_message,
-                "usage": {"input_tokens": usage.get("prompt_tokens", 0), "output_tokens": usage.get("completion_tokens", 0)},
+                "usage": {
+                    "input_tokens": usage.get("prompt_tokens", 0),
+                    "output_tokens": usage.get("completion_tokens", 0),
+                },
                 "model": self.model_id,
             }
 
