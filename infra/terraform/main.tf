@@ -255,6 +255,29 @@ output "worker_lambda_arn" {
   description = "Worker Lambda ARN"
 }
 
+resource "aws_cloudwatch_metric_alarm" "mira_api_errors" {
+  alarm_name          = "mira-api-dev-errors"
+  alarm_description   = "Alarm when mira-api-dev Lambda has >=1 errors in 1 minute (for testing)."
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+
+  evaluation_periods = 1
+  period             = 60 # 1 minute
+  statistic          = "Sum"
+  threshold          = 1
+
+  namespace   = "AWS/Lambda"
+  metric_name = "Errors"
+
+  dimensions = {
+    FunctionName = module.api_lambda.function_name
+  }
+
+  treat_missing_data = "notBreaching" # Do not issue false alarms when there is no data.
+
+  # We're not accepting SNS accounts yet, but we can add them later if needed.
+  # alarm_actions = [aws_sns_topic.alerts.arn]
+}
+
 
 module "bedrock_vpce" {
   source = "./modules/bedrock_vpce"
