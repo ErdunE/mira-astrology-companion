@@ -187,6 +187,36 @@ module "api_lambda" {
   s3_charts_bucket_name = module.s3_static.artifacts_bucket_name
 }
 
+########################################
+# Keep-warm rule for mira-api-dev
+########################################
+
+resource "aws_cloudwatch_event_rule" "api_keep_warm" {
+  name        = "${var.name_prefix}-api-keep-warm-${var.environment}"
+  description = "Periodically invoke mira-api-dev to keep it warm"
+  # The frequency can be adjusted here: start with once every 5 minutes, then change it to once every 1 minute before the demo.
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "api_keep_warm" {
+  rule      = aws_cloudwatch_event_rule.api_keep_warm.name
+  target_id = "mira-api-dev-keep-warm"
+  arn       = module.api_lambda.function_arn
+
+  # The event passed to Lambda allows the backend to recognize it as a keep-warm ping in the handler.
+  input = jsonencode({
+    "source" = "mira.keep-warm"
+  })
+}
+
+resource "aws_lambda_permission" "api_keep_warm" {
+  statement_id  = "AllowEventBridgeInvokeKeepWarm"
+  action        = "lambda:InvokeFunction"
+  function_name = module.api_lambda.function_arn
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.api_keep_warm.arn
+}
+
 
 module "worker_lambda" {
   source = "./modules/lambda_worker"
