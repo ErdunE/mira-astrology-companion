@@ -3,9 +3,16 @@ Main Lambda handler entry point for API Gateway.
 Routes requests to appropriate endpoint handlers.
 """
 
+import json
+import logging
+
 from api.health_handler import lambda_handler as health_handler
 from api.profile_handler import lambda_handler as profile_handler
 from api.chat_handler import lambda_handler as chat_handler
+
+# Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
@@ -17,6 +24,33 @@ def lambda_handler(event, context):
     - POST /profile -> User profile creation endpoint
     - POST /chat    -> Chat conversation endpoint
     """
+    # Handle warmup events from EventBridge keep-warm rule
+    if event.get("source") == "mira.keep-warm":
+        logger.info("Warmup event - establishing Bedrock connection")
+
+        try:
+            # Import here to avoid circular dependency
+            from common.bedrock_client import BedrockClient
+
+            # Initialize Bedrock client (establishes VPC endpoint connection)
+            client = BedrockClient()
+
+            # Make minimal Bedrock call to keep connection alive
+            test_result = client.generate_response(
+                user_profile={"zodiac_sign": "Aries", "birth_date": "2000-01-01", "birth_location": "Test"},
+                chart_data={"data": {}, "aspects": []},
+                user_question="warmup",
+                max_tokens=10,  # Minimal tokens to reduce cost
+            )
+
+            logger.info("Bedrock connection warmed successfully")
+            return {"statusCode": 200, "body": json.dumps({"status": "warmed", "bedrock": "connected"})}
+
+        except Exception as e:
+            logger.warning(f"Warmup Bedrock test failed: {e}")
+            # Still return success - warmup event should not fail
+            return {"statusCode": 200, "body": json.dumps({"status": "warmed", "bedrock": "failed"})}
+
     # Get path and HTTP method from event (HTTP API v2.0 format)
     raw_path = event.get("rawPath", "")
     http_method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
