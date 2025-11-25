@@ -1,0 +1,616 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+      deploy_lambda:
+        description: 'Deploy Lambda'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy Frontend'
+        required: false
+        default: true
+        type: boolean
+      deploy_terraform:
+        description: 'Apply Terraform'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  # Job 1: Detect changed components
+  detect-changes:
+    name: Detect Changed Components
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Detect file changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'app/backend/**'
+            frontend:
+              - 'app/frontend/**'
+            infra:
+              - 'infra/**'
+      
+      - name: Show detected changes
+        run: |
+          echo "================================================"
+          echo "🔍 File Change Detection"
+          echo "================================================"
+          echo ""
+          echo "Detected changes:"
+          echo "  Backend: ${{ steps.filter.outputs.backend }}"
+          echo "  Frontend: ${{ steps.filter.outputs.frontend }}"
+          echo "  Infrastructure: ${{ steps.filter.outputs.infra }}"
+          echo ""
+
+  # Job 2: deploy Lambda to AWS
+  deploy-lambda:
+    name: Deploy Lambda to AWS
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.backend == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_lambda == 'true')
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout Code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Setup Python
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      # 3. Configure AWS Credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 4. Determine Environment
+      - name: Determine deployment environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV="dev"  # main 也部署到 dev（暂时）
+          else
+            ENV="dev"
+          fi
+          
+          echo "environment=${ENV}" >> $GITHUB_OUTPUT
+          echo "Deploying to environment: ${ENV}"
+          
+          # Set Lambda function name based on environment
+          echo "lambda_function_name=mira-api-${ENV}" >> $GITHUB_OUTPUT
+          echo "Lambda function: mira-api-${ENV}"
+
+      # 5. Clean Previous Build
+      - name: Clean previous build artifacts
+        run: |
+          cd app/backend
+          rm -rf dist lambda-api.zip
+          echo "✅ Cleaned build artifacts"
+
+      # 6. Create Distribution Directory
+      - name: Create distribution directory
+        run: |
+          cd app/backend
+          mkdir -p dist
+          echo "✅ Distribution directory created"
+
+      # 7. Copy Application Code
+      - name: Copy application code
+        run: |
+          cd app/backend
+          cp handler.py dist/
+          cp -r api common dist/
+          echo "✅ Application code copied"
+
+      # 8. Install Dependencies
+      - name: Install Python dependencies
+        run: |
+          cd app/backend
+          
+          echo "Installing dependencies for Lambda runtime..."
+          pip install -r requirements.txt \
+            -t dist/ \
+            --platform manylinux2014_x86_64 \
+            --python-version 3.10 \
+            --implementation cp \
+            --only-binary=:all: \
+            --upgrade \
+            --quiet
+          
+          echo "✅ Dependencies installed"
+
+      # 9. Create Deployment Package
+      - name: Create deployment package
+        run: |
+          cd app/backend/dist
+          zip -r ../lambda-api.zip . -q
+          cd ..
+          
+          ZIP_SIZE=$(du -h lambda-api.zip | cut -f1)
+          echo "✅ Deployment package created (${ZIP_SIZE})"
+          
+          # Check size
+          SIZE_MB=$(du -m lambda-api.zip | cut -f1)
+          if [ $SIZE_MB -gt 50 ]; then
+            echo "⚠️  WARNING: Zip file is ${SIZE_MB}MB (AWS limit is 50MB for direct upload)"
+            echo "Consider using S3 for deployment if this continues to grow"
+          fi
+
+      # 10. Upload to Lambda
+      - name: Deploy to Lambda
+        run: |
+          cd app/backend
+          
+          echo "Uploading to Lambda function: ${{ steps.env.outputs.lambda_function_name }}"
+          
+          aws lambda update-function-code \
+            --function-name ${{ steps.env.outputs.lambda_function_name }} \
+            --zip-file fileb://lambda-api.zip \
+            --region ${{ secrets.AWS_REGION }} \
+            --no-cli-pager
+          
+          echo "✅ Code uploaded successfully"
+
+      # 11. Wait for Lambda Update
+      - name: Wait for Lambda to be ready
+        run: |
+          echo "Waiting for Lambda function to be ready..."
+          
+          aws lambda wait function-updated \
+            --function-name ${{ steps.env.outputs.lambda_function_name }} \
+            --region ${{ secrets.AWS_REGION }}
+          
+          echo "✅ Lambda function is ready"
+
+      # 12. Test Deployment
+      - name: Test health endpoint
+        run: |
+          echo "Testing health endpoint..."
+          
+          API_URL="https://jwlaxtz15k.execute-api.us-east-1.amazonaws.com"
+          
+          # Wait a bit for Lambda to fully initialize
+          sleep 5
+          
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health")
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Health check passed (HTTP ${HTTP_CODE})"
+            
+            RESPONSE=$(curl -s "${API_URL}/health")
+            echo "Response: $RESPONSE"
+          else
+            echo "❌ Health check failed (HTTP ${HTTP_CODE})"
+            echo ""
+            echo "Check Lambda logs:"
+            echo "  aws logs tail /aws/lambda/${{ steps.env.outputs.lambda_function_name }} --region ${{ secrets.AWS_REGION }} --since 2m"
+            exit 1
+          fi
+
+      # 13. Show Lambda Deployment Info
+      - name: Show Lambda deployment information
+        run: |
+          echo ""
+          echo "================================================"
+          echo "🚀 Lambda Deployment Successful!"
+          echo "================================================"
+          echo ""
+          echo "Lambda Function: ${{ steps.env.outputs.lambda_function_name }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Region: ${{ secrets.AWS_REGION }}"
+          echo ""
+          echo "API Endpoints:"
+          echo "  Health: https://jwlaxtz15k.execute-api.us-east-1.amazonaws.com/health"
+          echo "  Profile: https://jwlaxtz15k.execute-api.us-east-1.amazonaws.com/profile"
+          echo "  Chat: https://jwlaxtz15k.execute-api.us-east-1.amazonaws.com/chat"
+          echo ""
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          
+          # Show Lambda info
+          aws lambda get-function \
+            --function-name ${{ steps.env.outputs.lambda_function_name }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --query '{Runtime:Configuration.Runtime,MemorySize:Configuration.MemorySize,Timeout:Configuration.Timeout,LastModified:Configuration.LastModified}' \
+            --output table
+
+  # Job 3: deploy frontend to S3
+  deploy-frontend:
+    name: Deploy Frontend to S3
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.frontend == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_frontend == 'true')
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Setup Node
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: 'npm'
+          cache-dependency-path: app/frontend/package-lock.json
+
+      # 3. Configure AWS
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 4. Determine Environment
+      - name: Determine deployment environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV="dev"
+          else
+            ENV="dev"
+          fi
+          
+          echo "environment=${ENV}" >> $GITHUB_OUTPUT
+          echo "Deploying to environment: ${ENV}"
+          
+          # Set S3 bucket name based on environment
+          if [[ "${ENV}" == "prod" ]]; then
+            echo "s3_bucket=mira-prod-frontend-us-east-1" >> $GITHUB_OUTPUT
+          else
+            echo "s3_bucket=mira-dev-frontend-us-east-1" >> $GITHUB_OUTPUT
+          fi
+
+      # 5. Install Dependencies
+      - name: Install dependencies
+        run: |
+          cd app/frontend
+          npm ci
+          echo "✅ Dependencies installed"
+
+      # 6. Build Frontend
+      - name: Build frontend
+        run: |
+          cd app/frontend
+          npm run build
+          
+          # Check build output
+          if [ ! -d "dist" ]; then
+            echo "❌ Build failed - dist directory not created"
+            exit 1
+          fi
+          
+          BUILD_SIZE=$(du -sh dist | cut -f1)
+          FILE_COUNT=$(find dist -type f | wc -l)
+          echo "✅ Build completed (${BUILD_SIZE}, ${FILE_COUNT} files)"
+
+      # 7. Sync to S3
+      - name: Deploy to S3
+        run: |
+          cd app/frontend
+          
+          echo "Syncing to S3 bucket: ${{ steps.env.outputs.s3_bucket }}"
+          
+          # Sync all files except index.html with long cache
+          aws s3 sync dist/ s3://${{ steps.env.outputs.s3_bucket }}/ \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html" \
+            --region ${{ secrets.AWS_REGION }}
+          
+          # Upload index.html separately with no cache
+          aws s3 cp dist/index.html s3://${{ steps.env.outputs.s3_bucket }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --region ${{ secrets.AWS_REGION }}
+          
+          echo "✅ Frontend deployed to S3"
+
+      # 8. Verify Deployment
+      - name: Verify S3 deployment
+        run: |
+          echo "Verifying S3 deployment..."
+          
+          # Check if index.html exists
+          if aws s3 ls s3://${{ steps.env.outputs.s3_bucket }}/index.html --region ${{ secrets.AWS_REGION }} > /dev/null 2>&1; then
+            echo "✅ index.html verified"
+          else
+            echo "❌ index.html not found in S3"
+            exit 1
+          fi
+          
+          # Count files
+          FILE_COUNT=$(aws s3 ls s3://${{ steps.env.outputs.s3_bucket }}/ --recursive --region ${{ secrets.AWS_REGION }} | wc -l)
+          echo "✅ Total files in S3: ${FILE_COUNT}"
+
+      # 9. Show Frontend Deployment Info
+      - name: Show frontend deployment information
+        run: |
+          echo ""
+          echo "================================================"
+          echo "🎨 Frontend Deployment Successful!"
+          echo "================================================"
+          echo ""
+          echo "S3 Bucket: ${{ steps.env.outputs.s3_bucket }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Region: ${{ secrets.AWS_REGION }}"
+          echo ""
+          echo "Access URLs:"
+          echo "  S3 Website: http://${{ steps.env.outputs.s3_bucket }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
+          echo ""
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+
+  # Job 4: Terraform apply
+  terraform-apply:
+    name: Apply Terraform Changes
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.infra == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_terraform == 'true')
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      # 3. Configure AWS
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 4. Determine Environment
+      - name: Determine deployment environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV="dev"
+          else
+            ENV="dev"
+          fi
+          
+          echo "environment=${ENV}" >> $GITHUB_OUTPUT
+          echo "Deploying to environment: ${ENV}"
+
+      # 5. Terraform Format Check
+      - name: Terraform Format Check
+        run: |
+          cd infra/terraform
+          
+          if ! terraform fmt -check -recursive; then
+            echo "⚠️  WARNING: Terraform files not formatted"
+            echo "Run: terraform fmt -recursive"
+          fi
+
+      # 6. Terraform Init
+      - name: Terraform Init
+        run: |
+          cd infra/terraform
+          
+          echo "Initializing Terraform with remote backend..."
+          terraform init -input=false
+          
+          echo "✅ Terraform initialized"
+
+      # 7. Terraform Validate
+      - name: Terraform Validate
+        run: |
+          cd infra/terraform
+          terraform validate
+          echo "✅ Terraform configuration is valid"
+
+      # 8. Terraform Plan
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd infra/terraform
+          
+          echo "Running Terraform plan..."
+          
+          # Run plan and capture exit code
+          terraform plan \
+            -input=false \
+            -out=tfplan \
+            -detailed-exitcode || EXIT_CODE=$?
+          
+          # Exit codes:
+          # 0 = No changes
+          # 1 = Error
+          # 2 = Changes present
+          
+          if [ "${EXIT_CODE}" == "1" ]; then
+            echo "❌ Terraform plan failed"
+            exit 1
+          elif [ "${EXIT_CODE}" == "2" ]; then
+            echo "plan_has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Terraform plan completed - changes detected"
+          else
+            echo "plan_has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  No infrastructure changes needed"
+          fi
+
+      # 9. Show Plan Summary
+      - name: Show Terraform Plan
+        if: steps.plan.outputs.plan_has_changes == 'true'
+        run: |
+          cd infra/terraform
+          
+          echo ""
+          echo "================================================"
+          echo "📋 Terraform Plan Summary"
+          echo "================================================"
+          echo ""
+          
+          terraform show tfplan
+          
+          echo ""
+          echo "================================================"
+
+      # 10. Terraform Apply
+      - name: Terraform Apply
+        if: steps.plan.outputs.plan_has_changes == 'true'
+        run: |
+          cd infra/terraform
+          
+          echo "Applying Terraform changes..."
+          terraform apply -input=false tfplan
+          
+          echo "✅ Terraform apply completed successfully"
+
+      # 11. Show Terraform Outputs
+      - name: Show Terraform Outputs
+        if: steps.plan.outputs.plan_has_changes == 'true'
+        run: |
+          cd infra/terraform
+          
+          echo ""
+          echo "================================================"
+          echo "📤 Terraform Outputs"
+          echo "================================================"
+          echo ""
+          
+          terraform output
+
+      # 12. Show Terraform Deployment Info
+      - name: Show Terraform deployment information
+        run: |
+          echo ""
+          echo "================================================"
+          echo "🏗️ Terraform Deployment Complete!"
+          echo "================================================"
+          echo ""
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Region: ${{ secrets.AWS_REGION }}"
+          echo "Changes Applied: ${{ steps.plan.outputs.plan_has_changes || 'false' }}"
+          echo ""
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+
+  # Job 5: deployment summary
+  deployment-summary:
+    name: Deployment Summary
+    needs: [detect-changes, deploy-lambda, deploy-frontend, terraform-apply]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Generate complete deployment summary
+        run: |
+          echo ""
+          echo "========================================"
+          echo "📊 Complete Deployment Summary"
+          echo "========================================"
+          echo ""
+          echo "Trigger Information:"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Author: ${{ github.actor }}"
+          echo ""
+          echo "File Changes Detected:"
+          echo "  Backend: ${{ needs.detect-changes.outputs.backend }}"
+          echo "  Frontend: ${{ needs.detect-changes.outputs.frontend }}"
+          echo "  Infrastructure: ${{ needs.detect-changes.outputs.infra }}"
+          echo ""
+          echo "Deployment Results:"
+          echo "  Lambda: ${{ needs.deploy-lambda.result }}"
+          echo "  Frontend: ${{ needs.deploy-frontend.result }}"
+          echo "  Terraform: ${{ needs.terraform-apply.result }}"
+          echo ""
+          
+          # Determine overall status
+          LAMBDA_STATUS="${{ needs.deploy-lambda.result }}"
+          FRONTEND_STATUS="${{ needs.deploy-frontend.result }}"
+          TERRAFORM_STATUS="${{ needs.terraform-apply.result }}"
+          
+          if [[ "$LAMBDA_STATUS" == "failure" ]] || \
+             [[ "$FRONTEND_STATUS" == "failure" ]] || \
+             [[ "$TERRAFORM_STATUS" == "failure" ]]; then
+            echo "❌ Overall Status: FAILED"
+            echo ""
+            echo "Check the failed job(s) above for error details"
+            exit 1
+          elif [[ "$LAMBDA_STATUS" == "skipped" ]] && \
+               [[ "$FRONTEND_STATUS" == "skipped" ]] && \
+               [[ "$TERRAFORM_STATUS" == "skipped" ]]; then
+            echo "ℹ️  Overall Status: NO CHANGES DETECTED"
+            echo ""
+            echo "No deployment was necessary - all components are up to date"
+          else
+            echo "✅ Overall Status: SUCCESS"
+            echo ""
+            echo "=========================================="
+            echo "🎉 All Deployments Completed Successfully!"
+            echo "=========================================="
+            echo ""
+            
+            # Show what was deployed
+            if [[ "$LAMBDA_STATUS" == "success" ]]; then
+              echo "✅ Lambda deployed"
+            fi
+            if [[ "$FRONTEND_STATUS" == "success" ]]; then
+              echo "✅ Frontend deployed"
+            fi
+            if [[ "$TERRAFORM_STATUS" == "success" ]]; then
+              echo "✅ Infrastructure updated"
+            fi
+            
+            echo ""
+            echo "Deployment completed at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          fi
