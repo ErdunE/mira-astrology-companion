@@ -145,30 +145,37 @@ jobs:
             echo "ERROR: Changes section contains template instructions"
             echo ""
             echo "Fix: Remove '(Keep only the relevant sections.)' and fill in your changes"
-            echo ""
-            echo "Example:"
-            echo "  ## Changes"
-            echo "  - Backend: Added chat handler with cache logic"
-            echo "  - Infra: Created EventBridge keep-warm rule"
             exit 1
           fi
           
-          # Check if at least one category is filled
-          FILLED=false
-          for category in "Backend:" "Frontend:" "Infra:" "Async" "Other:"; do
-            if echo "$CHANGES" | grep -A 1 "$category" | tail -n 1 | grep -qv "^$"; then
-              FILLED=true
-              break
-            fi
-          done
+          # Check if section has actual content (not just the header)
+          # Remove the ## Changes line and check if there's content
+          CONTENT=$(echo "$CHANGES" | sed '1d' | sed '/^$/d')
           
-          if [ "$FILLED" = false ]; then
+          if [ -z "$CONTENT" ]; then
             echo "ERROR: Changes section is empty"
             echo ""
-            echo "Fix: Describe your changes under at least one category:"
+            echo "Fix: Describe your changes"
+            echo "Accepted formats:"
             echo "  - Backend: ..."
-            echo "  - Frontend: ..."
-            echo "  - Infra: ..."
+            echo "  ### Backend"
+            echo "  - List item"
+            exit 1
+          fi
+          
+          # Check if there's meaningful content (at least one bullet point or subsection)
+          if ! echo "$CHANGES" | grep -qE "^-\s+\w+:|^###\s+\w+"; then
+            echo "ERROR: Changes section has no structured content"
+            echo ""
+            echo "Fix: Use bullet points or subsections to describe changes"
+            echo ""
+            echo "Example 1 (bullet points):"
+            echo "  - Backend: Added feature X"
+            echo "  - Frontend: Updated UI"
+            echo ""
+            echo "Example 2 (subsections):"
+            echo "  ### Backend"
+            echo "  - Added feature X"
             exit 1
           fi
           
@@ -178,33 +185,36 @@ jobs:
         run: |
           echo "Checking Testing section..."
           
-          # Extract Testing section
+          # Extract Testing section (everything between ## Testing and ## Checklist)
           TESTING=$(echo "$PR_BODY" | sed -n '/## Testing/,/## Checklist/p')
           
           # Check for template text
           if echo "$TESTING" | grep -q "Describe how you tested this change"; then
             echo "ERROR: Testing section contains template text"
             echo ""
-            echo "Fix: Replace template with actual test steps"
-            echo ""
-            echo "Minimum required:"
-            echo "  - Describe how you tested locally"
-            echo "  - OR explain why testing is not applicable"
+            echo "Fix: Replace template with actual test information"
             exit 1
           fi
           
-          # Check if test steps are described
-          if ! echo "$TESTING" | grep -qE "(Step [0-9]|tested|verified|manual|integration)"; then
-            echo "ERROR: No test steps or verification described"
+          # Remove the ## Testing header and empty lines
+          CONTENT=$(echo "$TESTING" | sed '1d' | sed '/^$/d')
+          
+          if [ -z "$CONTENT" ]; then
+            echo "ERROR: Testing section is empty"
             echo ""
-            echo "Fix: Describe how you tested this change:"
-            echo "  Local test steps:"
-            echo "  - Step 1: ..."
-            echo "  - Step 2: ..."
-            echo "  Expected result: ..."
+            echo "Fix: Describe testing OR explain N/A"
+            exit 1
+          fi
+          
+          # Check if actual testing info is present
+          # Look for: Step, tested, verified, N/A, bash code blocks, etc.
+          if ! echo "$TESTING" | grep -qiE "(step|tested|verified|validation|n/a|```|manual|integration|local)"; then
+            echo "ERROR: No testing information found"
             echo ""
-            echo "OR if not testable, explain:"
-            echo "  Testing: N/A - documentation only change"
+            echo "Fix: Add testing details:"
+            echo "  - Describe test steps"
+            echo "  - Include expected results"
+            echo "  - OR explain: Testing: N/A (docs only)"
             exit 1
           fi
           
