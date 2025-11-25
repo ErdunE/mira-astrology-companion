@@ -5,6 +5,10 @@ on:
     branches:
       - dev
       - main
+    paths:  
+      - 'app/backend/**'
+      - 'app/frontend/**'
+      - 'infra/**'
 
   workflow_dispatch:
     inputs:
@@ -50,6 +54,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
+          base: ${{ github.event.before }}  
           filters: |
             backend:
               - 'app/backend/**'
