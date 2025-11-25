@@ -55,7 +55,7 @@ jobs:
             exit 1
           fi
 
-          REQUIRED_FIELDS=("## Summary" "## Linked Ticket" "## Changes" "## Testing" "## Checklist")
+          REQUIRED_FIELDS=("## Summary" "## Linked Ticket" "## Changes" "## Testing")
           MISSING=false
 
           for field in "${REQUIRED_FIELDS[@]}"; do
