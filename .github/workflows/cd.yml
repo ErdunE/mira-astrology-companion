@@ -105,7 +105,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             ENV="${{ github.event.inputs.environment }}"
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            ENV="dev"  # main 也部署到 dev（暂时）
+            ENV="dev"  
           else
             ENV="dev"
           fi
