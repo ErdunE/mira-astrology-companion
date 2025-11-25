@@ -20,4 +20,5 @@ variable "astrologer_api_key" {
   type        = string
   description = "Third-party Astrologer API key stored in Secrets Manager"
   sensitive   = true
+  default     = "placeholder"
 }
