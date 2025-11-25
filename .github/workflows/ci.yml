@@ -207,8 +207,21 @@ jobs:
           fi
           
           # Check if actual testing info is present
-          # Look for: Step, tested, verified, N/A, bash code blocks, etc.
-          if ! echo "$TESTING" | grep -qiE "(step|tested|verified|validation|n/a|```|manual|integration|local)"; then
+          # Look for: Step, tested, verified, N/A, code blocks, etc.
+          # Split the pattern to avoid backtick issues
+          HAS_TESTING=false
+          
+          if echo "$TESTING" | grep -qiE "(step|tested|verified|validation)"; then
+            HAS_TESTING=true
+          elif echo "$TESTING" | grep -qi "n/a"; then
+            HAS_TESTING=true
+          elif echo "$TESTING" | grep -q '```'; then
+            HAS_TESTING=true
+          elif echo "$TESTING" | grep -qiE "(manual|integration|local)"; then
+            HAS_TESTING=true
+          fi
+          
+          if [ "$HAS_TESTING" = false ]; then
             echo "ERROR: No testing information found"
             echo ""
             echo "Fix: Add testing details:"
