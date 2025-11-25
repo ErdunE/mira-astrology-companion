@@ -106,31 +106,32 @@ jobs:
         run: |
           echo "Checking for Notion ticket link..."
           
-          if ! grep -q "notion.so" <<< "$PR_BODY"; then
-            echo "ERROR: No Notion ticket link found"
+          LINKED_TICKET=$(echo "$PR_BODY" | sed -n '/## Linked Ticket/,/## Changes/p')
+          if ! grep -q "notion.so" <<< "$LINKED_TICKET"; then
+            if ! grep -qi "N/A" <<< "$LINKED_TICKET"; then
+              echo "ERROR: No Notion ticket link found in Linked Ticket section"
+              echo ""
+              echo "Fix: Add a Notion ticket link OR explain why N/A"
+              echo ""
+              echo "Example with link:"
+              echo "  ## Linked Ticket"
+              echo "  [[Ticket Title](https://notion.so/...)]"
+              echo ""
+              echo "Example without link:"
+              echo "  ## Linked Ticket"
+              echo "  N/A - Minor typo fix"
+              exit 1
+            fi
+          fi
+          
+          if grep -q "change the title and link below" <<< "$LINKED_TICKET"; then
+            echo "ERROR: Linked Ticket section contains template text"
             echo ""
-            echo "Fix: Add a Notion ticket link in the 'Linked Ticket' section"
-            echo ""
-            echo "Steps:"
-            echo "  1. Create a ticket in Notion for this task"
-            echo "  2. Copy the share link"
-            echo "  3. Add it to the PR description:"
-            echo "     Notion Ticket: [[Ticket Title](https://notion.so/...)]"
-            echo ""
-            echo "If this PR doesn't need a ticket, add explanation:"
-            echo "     Notion Ticket: N/A (minor fix/typo)"
+            echo "Fix: Remove '<change the title and link below>' and add your actual ticket link"
             exit 1
           fi
           
-          # Check if it's still template text
-          if grep -q "change the title and link below" <<< "$PR_BODY"; then
-            echo "ERROR: Notion ticket section contains template text"
-            echo ""
-            echo "Fix: Replace the template link with your actual Notion ticket"
-            exit 1
-          fi
-          
-          echo "✅ Notion ticket linked"
+          echo "✅ Notion ticket section is valid"
 
       - name: Verify Changes Section
         run: |
