@@ -40,6 +40,7 @@ export default [
       'no-unused-vars': 'warn',   
       'react/no-unescaped-entities': 'warn',  
       'no-undef': 'off', 
+      'react/no-unknown-property': 'off', 
     },
   },
 ]
