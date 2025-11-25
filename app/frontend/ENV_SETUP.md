@@ -31,9 +31,14 @@ VITE_API_BASE_URL=http://localhost:3000/api
 # Required for authentication: AWS Cognito configuration
 VITE_AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 VITE_AWS_COGNITO_CLIENT_ID=your-app-client-id
+VITE_AWS_COGNITO_DOMAIN=your-app.auth.us-east-1.amazoncognito.com
 
 # Required: AWS Region
 VITE_AWS_REGION=us-east-1
+
+# OAuth callback URLs (auto-detected if not set)
+VITE_COGNITO_CALLBACK_URL=http://localhost:5173/callback
+VITE_COGNITO_LOGOUT_URL=http://localhost:5173/
 ```
 
 ### 3. Start the Development Server
@@ -58,8 +63,8 @@ npm run dev
 |----------|----------|-------------|---------|
 | `VITE_AWS_COGNITO_USER_POOL_ID` | ✅ Yes | Cognito User Pool ID | `us-east-1_abc123xyz` |
 | `VITE_AWS_COGNITO_CLIENT_ID` | ✅ Yes | Cognito App Client ID | `1a2b3c4d5e6f7g8h9i0j1k2l3m` |
+| `VITE_AWS_COGNITO_DOMAIN` | ✅ Yes | Cognito hosted UI domain | `your-app.auth.us-east-1.amazoncognito.com` |
 | `VITE_AWS_COGNITO_IDENTITY_POOL_ID` | ⚪ Optional | Identity Pool ID for federated identities | `us-east-1:12345678-1234-1234-1234-123456789012` |
-| `VITE_AWS_COGNITO_DOMAIN` | ⚪ Optional | Cognito hosted UI domain | `your-app.auth.us-east-1.amazoncognito.com` |
 
 ### AWS Configuration
 
@@ -72,6 +77,13 @@ npm run dev
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `VITE_WEBSOCKET_URL` | ⚪ Optional | WebSocket endpoint for real-time chat | `wss://xyz789.execute-api.us-east-1.amazonaws.com/prod` |
+
+### Cognito OAuth Configuration
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `VITE_COGNITO_CALLBACK_URL` | ⚪ Optional | OAuth callback URL (auto-detected if not set) | `http://localhost:5173/callback` |
+| `VITE_COGNITO_LOGOUT_URL` | ⚪ Optional | Logout redirect URL (auto-detected if not set) | `http://localhost:5173/` |
 
 ### Application Configuration
 

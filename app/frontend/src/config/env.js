@@ -56,6 +56,16 @@ export const config = {
     },
   },
   
+  // Cognito OAuth Configuration
+  cognito: {
+    callbackUrl: getEnvVar('COGNITO_CALLBACK_URL', 
+      typeof window !== 'undefined' ? `${window.location.origin}/callback` : 'http://localhost:5173/callback'
+    ),
+    logoutUrl: getEnvVar('COGNITO_LOGOUT_URL',
+      typeof window !== 'undefined' ? `${window.location.origin}/` : 'http://localhost:5173/'
+    ),
+  },
+  
   // Application Configuration
   app: {
     env: getEnvVar('APP_ENV', 'development'),

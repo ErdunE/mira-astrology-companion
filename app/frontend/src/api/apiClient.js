@@ -1,5 +1,6 @@
 // API Client - Configured via environment variables
 import config from '../config/env.js';
+import { cognitoAuth } from '../services/cognitoAuth.js';
 
 const BASE_URL = config.api.baseUrl;
 
@@ -9,10 +10,11 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const token = localStorage.getItem('auth_token');
+    // Get token from Cognito auth service
+    const authHeader = cognitoAuth.getAuthHeader();
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(authHeader && { Authorization: authHeader }),
       ...options.headers,
     };
 
@@ -26,9 +28,9 @@ class ApiClient {
       
       if (!response.ok) {
         if (response.status === 401) {
-          // Handle unauthorized - redirect to login
-          localStorage.removeItem('auth_token');
-          window.location.href = '/landing';
+          // Handle unauthorized - clear session and redirect to login
+          cognitoAuth.clearSession();
+          window.location.href = '/';
           throw new Error('Unauthorized');
         }
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -47,36 +49,27 @@ class ApiClient {
       return this.request('/auth/me');
     },
     
-    login: async (email, password) => {
-      const data = await this.request('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-      }
-      return data;
+    // Note: Login/signup now handled by Cognito Hosted UI
+    // These methods are kept for backward compatibility but will use Cognito
+    login: async () => {
+      console.warn('Direct login deprecated - use Cognito Hosted UI via cognitoAuth.login()');
+      cognitoAuth.login();
     },
     
-    signup: async (email, password, name) => {
-      const data = await this.request('/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify({ email, password, name }),
-      });
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-      }
-      return data;
+    signup: async () => {
+      console.warn('Direct signup deprecated - use Cognito Hosted UI via cognitoAuth.signup()');
+      cognitoAuth.signup();
     },
     
     logout: () => {
-      localStorage.removeItem('auth_token');
-      window.location.href = '/landing';
+      cognitoAuth.logout();
     },
     
     redirectToLogin: (returnUrl) => {
-      localStorage.setItem('return_url', returnUrl || window.location.pathname);
-      window.location.href = '/landing';
+      if (returnUrl) {
+        localStorage.setItem('return_url', returnUrl);
+      }
+      window.location.href = '/';
     },
   };
 
