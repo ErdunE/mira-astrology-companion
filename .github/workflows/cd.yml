@@ -541,27 +541,28 @@ jobs:
           
           echo "Running Terraform plan..."
           
-          set +e  
-          terraform plan -input=false -out=tfplan -detailed-exitcode
-          EXIT_CODE=$?
-          set -e
+          terraform plan -input=false -out=tfplan -detailed-exitcode || PLAN_EXIT_CODE=$?
 
-          echo "Terraform plan exit code: ${EXIT_CODE}"
-
-          if [ -z "${EXIT_CODE}" ]; then
-            # No exit code means success with no changes
-            EXIT_CODE=0
+          if [ -z "${PLAN_EXIT_CODE}" ]; then
+            PLAN_EXIT_CODE=0
           fi
 
-          if [ "${EXIT_CODE}" == "1" ]; then
+          echo ""
+          echo "Terraform plan exit code: ${PLAN_EXIT_CODE}"
+          echo "  0 = Success, no changes"
+          echo "  1 = Error"  
+          echo "  2 = Success, changes detected"
+          echo ""
+
+          if [ "${PLAN_EXIT_CODE}" -eq 1 ]; then
             echo "❌ Terraform plan failed"
             exit 1
-          elif [ "${EXIT_CODE}" == "2" ]; then
+          elif [ "${PLAN_EXIT_CODE}" -eq 2 ]; then
             echo "plan_has_changes=true" >> $GITHUB_OUTPUT
-            echo "✅ Terraform plan completed - changes detected"
+            echo "✅ Changes detected - will apply"
           else
             echo "plan_has_changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No infrastructure changes needed"
+            echo "ℹ️ No changes needed"
           fi
 
       # 9. Show Plan Summary
