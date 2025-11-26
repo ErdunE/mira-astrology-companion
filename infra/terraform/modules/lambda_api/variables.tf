@@ -104,3 +104,13 @@ variable "s3_charts_bucket_name" {
   type        = string
   description = "S3 bucket name used to store generated charts"
 }
+
+variable "tracing_mode" {
+  description = "Lambda X-Ray tracing mode (Active or PassThrough)"
+  type        = string
+  default     = "Active"
+  validation {
+    condition     = contains(["Active", "PassThrough"], var.tracing_mode)
+    error_message = "Tracing mode must be either 'Active' or 'PassThrough'."
+  }
+}

@@ -19,3 +19,13 @@ output "artifacts_bucket_arn" {
   value       = aws_s3_bucket.artifacts.arn
   description = "ARN of the artifacts bucket."
 }
+
+output "frontend_website_endpoint" {
+  description = "S3 bucket website endpoint"
+  value       = aws_s3_bucket_website_configuration.frontend.website_endpoint
+}
+
+output "frontend_website_domain" {
+  description = "S3 bucket website domain"
+  value       = aws_s3_bucket_website_configuration.frontend.website_domain
+}

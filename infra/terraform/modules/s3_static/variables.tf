@@ -27,3 +27,9 @@ variable "artifacts_lifecycle_expiration_days" {
   default     = 365
   description = "Number of days after which non-current artifact versions expire."
 }
+
+variable "cloudfront_oai_id" {
+  description = "CloudFront Origin Access Identity ID for S3 bucket policy"
+  type        = string
+  default     = ""
+}
