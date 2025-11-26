@@ -223,6 +223,10 @@ resource "aws_lambda_function" "from_zip" {
   timeout          = var.timeout
   environment { variables = var.environment_variables }
 
+  tracing_config {
+    mode = var.tracing_mode
+  }
+
   dynamic "vpc_config" {
     for_each = length(var.subnet_ids) > 0 && length(var.security_group_ids) > 0 ? [1] : []
     content {
@@ -261,6 +265,27 @@ locals {
   fn_arn        = try(aws_lambda_function.from_zip[0].arn, aws_lambda_function.from_s3[0].arn)
   fn_invoke_arn = try(aws_lambda_function.from_zip[0].invoke_arn, aws_lambda_function.from_s3[0].invoke_arn)
   fn_name       = try(aws_lambda_function.from_zip[0].function_name, aws_lambda_function.from_s3[0].function_name)
+}
+
+# ----- X-Ray tracing permissions -----
+
+data "aws_iam_policy_document" "xray_tracing" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "xray:PutTraceSegments",
+      "xray:PutTelemetryRecords",
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "xray_tracing" {
+  name   = "${var.name_prefix}-${var.function_name}-xray"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.xray_tracing.json
 }
 
 # HTTP API Gateway (optional)
