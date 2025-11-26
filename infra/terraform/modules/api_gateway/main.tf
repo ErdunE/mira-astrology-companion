@@ -14,7 +14,7 @@ resource "aws_apigatewayv2_api" "this" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_methods = ["GET", "POST", "DELETE", "PATCH", "OPTIONS"]
     allow_origins = ["*"] # The domain name can be replaced with the front-end domain name later.
     allow_headers = ["*"]
   }
@@ -95,6 +95,63 @@ resource "aws_apigatewayv2_route" "profile_post" {
   route_key = "POST /profile"
 
   target = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+## Conversation Management Routes (all protected with JWT)
+
+# POST /conversations - Create new conversation thread
+resource "aws_apigatewayv2_route" "conversations_create" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "POST /conversations"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+# GET /conversations - List all conversations
+resource "aws_apigatewayv2_route" "conversations_list" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /conversations"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+# GET /conversations/{conversation_id}/messages - Get conversation messages
+resource "aws_apigatewayv2_route" "conversations_messages" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /conversations/{conversation_id}/messages"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+# DELETE /conversations/{conversation_id} - Delete conversation
+resource "aws_apigatewayv2_route" "conversations_delete" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "DELETE /conversations/{conversation_id}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type   = "JWT"
+  authorization_scopes = []
+}
+
+# PATCH /conversations/{conversation_id} - Update conversation
+resource "aws_apigatewayv2_route" "conversations_update" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "PATCH /conversations/{conversation_id}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 
   authorizer_id        = aws_apigatewayv2_authorizer.jwt.id
   authorization_type   = "JWT"

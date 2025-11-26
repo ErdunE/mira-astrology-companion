@@ -22,8 +22,12 @@ class UserProfileInput(BaseModel):
 
     birth_date: str = Field(..., description="Birth date in YYYY-MM-DD format")
     birth_time: str = Field(..., description="Birth time in HH:MM format (24-hour)")
-    birth_location: str = Field(..., description="Birth location (city, state/province)")
-    birth_country: str = Field(..., description="Birth country (e.g., United States, China)")
+    birth_location: str = Field(
+        ..., description="Birth location (city, state/province)"
+    )
+    birth_country: str = Field(
+        ..., description="Birth country (e.g., United States, China)"
+    )
 
     @field_validator("birth_date")
     @classmethod
@@ -50,7 +54,9 @@ class UserProfileInput(BaseModel):
         try:
             parsed_date = datetime.strptime(v, "%Y-%m-%d").date()
         except ValueError:
-            raise ValueError("Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)")
+            raise ValueError(
+                "Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)"
+            )
 
         # Check not in future
         if parsed_date > date.today():
@@ -324,7 +330,11 @@ if __name__ == "__main__":
     # Test 6: Missing field (country)
     print("\n[Test 6] Missing required field (country)")
     print("-" * 60)
-    missing_field = {"birth_date": "1990-01-15", "birth_time": "14:30", "birth_location": "New York, NY"}
+    missing_field = {
+        "birth_date": "1990-01-15",
+        "birth_time": "14:30",
+        "birth_location": "New York, NY",
+    }
 
     try:
         validate_user_profile(missing_field)

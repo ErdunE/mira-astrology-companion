@@ -65,8 +65,12 @@ def api_handler(func: Callable) -> Callable:
 
         except Exception as e:
             # Server error
-            logger.error(f"Request {request_id} failed - Internal error: {str(e)}", exc_info=True)
-            return _build_response(500, {"error": "Internal server error", "message": str(e)})
+            logger.error(
+                f"Request {request_id} failed - Internal error: {str(e)}", exc_info=True
+            )
+            return _build_response(
+                500, {"error": "Internal server error", "message": str(e)}
+            )
 
     return wrapper
 

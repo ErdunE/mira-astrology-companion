@@ -30,7 +30,13 @@ RETRY_BACKOFF = [1, 2, 4]  # Exponential backoff in seconds
 class AstrologyAPIError(Exception):
     """Custom exception for Astrology API errors."""
 
-    def __init__(self, message: str, status_code: int = None, retry_count: int = 0, original_error: str = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = None,
+        retry_count: int = 0,
+        original_error: str = None,
+    ):
         self.message = message
         self.status_code = status_code
         self.retry_count = retry_count
@@ -101,7 +107,10 @@ class AstrologyClient:
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving API key: {e}")
-            raise AstrologyAPIError(message="Failed to initialize Astrology API client", original_error=str(e))
+            raise AstrologyAPIError(
+                message="Failed to initialize Astrology API client",
+                original_error=str(e),
+            )
 
     def get_birth_chart(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -123,7 +132,9 @@ class AstrologyClient:
         Raises:
             AstrologyAPIError: If API call fails after retries
         """
-        logger.info(f"Generating birth chart for user profile: {user_profile.get('birth_location')}")
+        logger.info(
+            f"Generating birth chart for user profile: {user_profile.get('birth_location')}"
+        )
 
         # Build request payload
         try:
@@ -131,12 +142,16 @@ class AstrologyClient:
             logger.info(f"Request payload built: {json.dumps(payload, default=str)}")
         except Exception as e:
             logger.error(f"Failed to build request payload: {e}")
-            raise AstrologyAPIError(message="Invalid user profile data", original_error=str(e))
+            raise AstrologyAPIError(
+                message="Invalid user profile data", original_error=str(e)
+            )
 
         # Make API call with retry logic
         for attempt in range(MAX_RETRIES):
             try:
-                logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} to call Astrologer API")
+                logger.info(
+                    f"Attempt {attempt + 1}/{MAX_RETRIES} to call Astrologer API"
+                )
 
                 response = self._make_api_request(payload, timeout=REQUEST_TIMEOUT)
 
@@ -171,7 +186,10 @@ class AstrologyClient:
 
             except Exception as e:
                 logger.error(f"Unexpected error during API call: {e}", exc_info=True)
-                raise AstrologyAPIError(message="Unexpected error calling Astrology API", original_error=str(e))
+                raise AstrologyAPIError(
+                    message="Unexpected error calling Astrology API",
+                    original_error=str(e),
+                )
 
     def _build_request_payload(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -212,7 +230,9 @@ class AstrologyClient:
         if self.geonames_username:
             subject["geonames_username"] = self.geonames_username
         else:
-            logger.warning("Geonames username not configured, API may require manual coordinates")
+            logger.warning(
+                "Geonames username not configured, API may require manual coordinates"
+            )
 
         return {"subject": subject}
 
@@ -255,7 +275,9 @@ class AstrologyClient:
             logger.error(f"Could not find country code for: {country_name}")
             raise ValueError(f"Unknown country: {country_name}")
 
-    def _make_api_request(self, payload: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+    def _make_api_request(
+        self, payload: Dict[str, Any], timeout: int
+    ) -> Dict[str, Any]:
         """
         Make HTTP request to Astrologer API.
 
@@ -293,7 +315,9 @@ class AstrologyClient:
 
             logger.error(error_message)
             raise AstrologyAPIError(
-                message="Astrologer API error", status_code=response.status_code, original_error=error_message
+                message="Astrologer API error",
+                status_code=response.status_code,
+                original_error=error_message,
             )
 
         return response.json()
@@ -311,7 +335,11 @@ class AstrologyClient:
         return {
             "svg_content": response.get("chart", ""),
             "chart_data": response,  # Keep complete response
-            "metadata": {"generated_at": int(time.time()), "api_provider": "astrologer", "api_version": "v4"},
+            "metadata": {
+                "generated_at": int(time.time()),
+                "api_provider": "astrologer",
+                "api_version": "v4",
+            },
         }
 
 

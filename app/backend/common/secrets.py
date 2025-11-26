@@ -155,7 +155,9 @@ if __name__ == "__main__":
         """Test with mocked Secrets Manager"""
         # Setup mock response
         mock_client = Mock()
-        mock_client.get_secret_value.return_value = {"SecretString": '{"api_key": "test-key-12345"}'}
+        mock_client.get_secret_value.return_value = {
+            "SecretString": '{"api_key": "test-key-12345"}'
+        }
         mock_boto.return_value = mock_client
 
         # Clear cache for clean test
@@ -168,7 +170,9 @@ if __name__ == "__main__":
 
         # Test get_astrology_api_key
         clear_secret_cache()
-        mock_client.get_secret_value.return_value = {"SecretString": '{"api_key": "astrology-key-xyz"}'}
+        mock_client.get_secret_value.return_value = {
+            "SecretString": '{"api_key": "astrology-key-xyz"}'
+        }
 
         # Reset call count for clean caching test
         mock_client.get_secret_value.reset_mock()
@@ -198,7 +202,13 @@ if __name__ == "__main__":
         """Test error handling for ResourceNotFoundException"""
         mock_client = Mock()
         mock_client.get_secret_value.side_effect = ClientError(
-            {"Error": {"Code": "ResourceNotFoundException", "Message": "Secret not found"}}, "GetSecretValue"
+            {
+                "Error": {
+                    "Code": "ResourceNotFoundException",
+                    "Message": "Secret not found",
+                }
+            },
+            "GetSecretValue",
         )
         mock_boto.return_value = mock_client
 
@@ -224,7 +234,8 @@ if __name__ == "__main__":
         """Test error handling for AccessDeniedException"""
         mock_client = Mock()
         mock_client.get_secret_value.side_effect = ClientError(
-            {"Error": {"Code": "AccessDeniedException", "Message": "Access denied"}}, "GetSecretValue"
+            {"Error": {"Code": "AccessDeniedException", "Message": "Access denied"}},
+            "GetSecretValue",
         )
         mock_boto.return_value = mock_client
 
@@ -268,4 +279,6 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("All mock tests passed!")
     print("\nTo test with real AWS Secrets Manager:")
-    print("  aws secretsmanager get-secret-value --secret-id '/mira/astrology/api_key' --region us-east-1")
+    print(
+        "  aws secretsmanager get-secret-value --secret-id '/mira/astrology/api_key' --region us-east-1"
+    )
