@@ -43,7 +43,7 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 
   error_document {
-    key = "index.html"  # For SPA routing
+    key = "index.html" # For SPA routing
   }
 }
 
@@ -56,8 +56,8 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontOAI"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontOAI"
+        Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${var.cloudfront_oai_id}"
         }
