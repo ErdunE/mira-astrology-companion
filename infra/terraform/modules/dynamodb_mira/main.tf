@@ -81,6 +81,6 @@ resource "aws_dynamodb_table" "conversations" {
 
   tags = merge(local.common_tags, {
     "Table" = "conversations"
-    "TestCD" = "verifying-remote-status"
+    "TestCD" = "verifying-remote-statussss"
   })
 }

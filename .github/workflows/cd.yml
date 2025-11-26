@@ -541,28 +541,34 @@ jobs:
           
           echo "Running Terraform plan..."
           
-          terraform plan -input=false -out=tfplan -detailed-exitcode || PLAN_EXIT_CODE=$?
+          terraform plan -input=false -out=tfplan -detailed-exitcode > /tmp/plan_output.txt 2>&1 || true
 
-          if [ -z "${PLAN_EXIT_CODE}" ]; then
-            PLAN_EXIT_CODE=0
-          fi
-
+          cat /tmp/plan_output.txt
+    
           echo ""
-          echo "Terraform plan exit code: ${PLAN_EXIT_CODE}"
-          echo "  0 = Success, no changes"
-          echo "  1 = Error"  
-          echo "  2 = Success, changes detected"
+          echo "================================================"
+          echo "🔍 Analyzing Plan Output"
+          echo "================================================"
           echo ""
 
-          if [ "${PLAN_EXIT_CODE}" -eq 1 ]; then
-            echo "❌ Terraform plan failed"
+          if grep -q "No changes" /tmp/plan_output.txt; then
+            echo "plan_has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No infrastructure changes needed"
+            
+          elif grep -q "Plan: 0 to add, 0 to change, 0 to destroy" /tmp/plan_output.txt; then
+            echo "plan_has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No infrastructure changes needed"
+            
+          elif grep -q "Error:" /tmp/plan_output.txt; then
+            echo "❌ Terraform plan encountered errors"
             exit 1
-          elif [ "${PLAN_EXIT_CODE}" -eq 2 ]; then
+            
+          else
+            PLAN_LINE=$(grep "Plan:" /tmp/plan_output.txt | tail -1)
+            echo "Detected changes: ${PLAN_LINE}"
+            
             echo "plan_has_changes=true" >> $GITHUB_OUTPUT
             echo "✅ Changes detected - will apply"
-          else
-            echo "plan_has_changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No changes needed"
           fi
 
       # 9. Show Plan Summary
