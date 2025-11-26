@@ -127,9 +127,7 @@ def lambda_handler(event, context):
 
     # Conversation detail routes with path parameters
     # Pattern: /conversations/{conversation_id} or /conversations/{conversation_id}/messages
-    elif raw_path.startswith("/conversations/") or raw_path.startswith(
-        "/default/conversations/"
-    ):
+    elif raw_path.startswith("/conversations/") or raw_path.startswith("/default/conversations/"):
         # Extract conversation_id from path
         # Pattern: /conversations/{id} or /conversations/{id}/messages or /default/conversations/{id}
 
@@ -176,11 +174,7 @@ def lambda_handler(event, context):
                 return {
                     "statusCode": 404,
                     "headers": {"Content-Type": "application/json"},
-                    "body": json.dumps(
-                        {
-                            "error": "Use GET /conversations/{id}/messages to get conversation data"
-                        }
-                    ),
+                    "body": json.dumps({"error": "Use GET /conversations/{id}/messages to get conversation data"}),
                 }
             else:
                 return {
@@ -196,7 +190,5 @@ def lambda_handler(event, context):
     return {
         "statusCode": 404,
         "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(
-            {"error": "Not found", "path": raw_path, "method": http_method}
-        ),
+        "body": json.dumps({"error": "Not found", "path": raw_path, "method": http_method}),
     }

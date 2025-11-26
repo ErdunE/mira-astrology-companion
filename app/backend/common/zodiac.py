@@ -52,9 +52,7 @@ def calculate_zodiac_sign(birth_date: str) -> str:
         # Handle signs that span across year boundary (like Capricorn)
         if start_month > end_month:
             # Sign spans Dec-Jan
-            if (month == start_month and day >= start_day) or (
-                month == end_month and day <= end_day
-            ):
+            if (month == start_month and day >= start_day) or (month == end_month and day <= end_day):
                 return sign
         else:
             # Normal case: sign within same year

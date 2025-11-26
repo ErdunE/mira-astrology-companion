@@ -31,9 +31,7 @@ s3_client = boto3.client("s3")
 
 # Table and bucket names from environment
 PROFILES_TABLE = os.environ.get("DYNAMODB_PROFILES_TABLE", "mira-user-profiles-dev")
-CONVERSATIONS_TABLE = os.environ.get(
-    "DYNAMODB_CONVERSATIONS_TABLE", "mira-conversations-dev"
-)
+CONVERSATIONS_TABLE = os.environ.get("DYNAMODB_CONVERSATIONS_TABLE", "mira-conversations-dev")
 CHARTS_BUCKET = os.environ.get("S3_CHARTS_BUCKET", "mira-dev-artifacts")
 
 # Cache TTL (30 days in seconds)
@@ -204,9 +202,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     # Step 4: Save conversation
     try:
-        conversation_id = save_conversation(
-            user_id, user_message, ai_response, chart_url
-        )
+        conversation_id = save_conversation(user_id, user_message, ai_response, chart_url)
         logger.info(f"Conversation saved: {conversation_id}")
     except Exception as e:
         logger.error(f"Failed to save conversation: {e}")
@@ -238,9 +234,7 @@ def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
         raise
 
 
-def get_or_generate_chart(
-    user_id: str, user_profile: Dict[str, Any]
-) -> tuple[Optional[Dict], Optional[str], bool]:
+def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[Optional[Dict], Optional[str], bool]:
     """
     Get cached chart or generate new one.
 
@@ -272,9 +266,7 @@ def get_or_generate_chart(
         logger.info(
             f"Cached chart keys: {list(cached_chart_data.keys()) if isinstance(cached_chart_data, dict) else 'N/A'}"
         )
-        logger.info(
-            f"Chart data sample: {json.dumps(cached_chart_data, default=str)[:500]}..."
-        )
+        logger.info(f"Chart data sample: {json.dumps(cached_chart_data, default=str)[:500]}...")
 
         return cached_chart_data, chart_url, True
 
@@ -314,9 +306,7 @@ def get_or_generate_chart(
         return None, None, False
 
 
-def update_profile_with_chart(
-    user_id: str, s3_path: str, timestamp: int, chart_data: Dict[str, Any]
-) -> None:
+def update_profile_with_chart(user_id: str, s3_path: str, timestamp: int, chart_data: Dict[str, Any]) -> None:
     """Update user profile with chart metadata."""
     table = dynamodb.Table(PROFILES_TABLE)
 
@@ -342,9 +332,7 @@ def update_profile_with_chart(
         raise
 
 
-def save_conversation(
-    user_id: str, user_message: str, ai_response: str, chart_url: Optional[str]
-) -> str:
+def save_conversation(user_id: str, user_message: str, ai_response: str, chart_url: Optional[str]) -> str:
     """Save conversation to DynamoDB."""
     table = dynamodb.Table(CONVERSATIONS_TABLE)
 

@@ -288,9 +288,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     return {
         "statusCode": 200,
-        "body": json.dumps(
-            {"message": "Profile created successfully", "profile": response_profile}
-        ),
+        "body": json.dumps({"message": "Profile created successfully", "profile": response_profile}),
     }
 
 
@@ -318,11 +316,7 @@ if __name__ == "__main__":
                 "birth_country": "United States",
             }
         ),
-        "requestContext": {
-            "authorizer": {
-                "claims": {"sub": "test-user-12345", "email": "test@example.com"}
-            }
-        },
+        "requestContext": {"authorizer": {"claims": {"sub": "test-user-12345", "email": "test@example.com"}}},
     }
 
     result = lambda_handler(test_event, MockContext())

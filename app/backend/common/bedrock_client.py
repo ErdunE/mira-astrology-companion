@@ -24,9 +24,7 @@ DEFAULT_TEMPERATURE = 0.7
 class BedrockError(Exception):
     """Custom exception for Bedrock API errors."""
 
-    def __init__(
-        self, message: str, error_code: str = None, original_error: str = None
-    ):
+    def __init__(self, message: str, error_code: str = None, original_error: str = None):
         self.message = message
         self.error_code = error_code
         self.original_error = original_error
@@ -60,9 +58,7 @@ class BedrockClient:
             logger.info(f"BedrockClient initialized with model: {self.model_id}")
         except Exception as e:
             logger.error(f"Failed to initialize Bedrock client: {e}")
-            raise BedrockError(
-                message="Failed to initialize Bedrock client", original_error=str(e)
-            )
+            raise BedrockError(message="Failed to initialize Bedrock client", original_error=str(e))
 
     def generate_response(
         self,
@@ -99,9 +95,7 @@ class BedrockClient:
             logger.info(f"Built {len(messages)} messages for AI")
         except Exception as e:
             logger.error(f"Failed to build messages: {e}")
-            raise BedrockError(
-                message="Failed to build AI prompt", original_error=str(e)
-            )
+            raise BedrockError(message="Failed to build AI prompt", original_error=str(e))
 
         # Build request payload (OpenAI format)
         request_body = {
@@ -139,9 +133,7 @@ class BedrockClient:
             logger.info(f"Duration: {duration:.2f} seconds")
             logger.info("=" * 60)
             logger.info("BEDROCK RESPONSE DEBUG")
-            logger.info(
-                f"HTTP Status: {response['ResponseMetadata']['HTTPStatusCode']}"
-            )
+            logger.info(f"HTTP Status: {response['ResponseMetadata']['HTTPStatusCode']}")
             logger.info(f"Request ID: {response['ResponseMetadata']['RequestId']}")
             logger.info("=" * 60)
 
@@ -174,9 +166,7 @@ class BedrockClient:
             logger.error(f"Message: {str(e)}")
             logger.error("=" * 60)
             logger.error("Full traceback:", exc_info=True)
-            raise BedrockError(
-                message="Unexpected error during AI generation", original_error=str(e)
-            )
+            raise BedrockError(message="Unexpected error during AI generation", original_error=str(e))
 
     def _build_messages(
         self,
@@ -223,9 +213,7 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
 
         return [system_message, user_message]
 
-    def _format_user_context(
-        self, user_profile: Dict[str, Any], chart_data: Dict[str, Any]
-    ) -> str:
+    def _format_user_context(self, user_profile: Dict[str, Any], chart_data: Dict[str, Any]) -> str:
         """
         Format user profile and chart data into readable context.
         OPTIMIZED VERSION - Only includes key astrological information.
@@ -292,14 +280,9 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
             planet2 = aspect.get("p2_name", "")
 
             if aspect_type in important_aspect_types:
-                if (
-                    planet1 in key_planets_for_aspects
-                    or planet2 in key_planets_for_aspects
-                ):
+                if planet1 in key_planets_for_aspects or planet2 in key_planets_for_aspects:
                     orb = aspect.get("orbit", 0)
-                    major_aspects.append(
-                        f"  {planet1} {aspect_type} {planet2} (orb: {orb:.1f}°)"
-                    )
+                    major_aspects.append(f"  {planet1} {aspect_type} {planet2} (orb: {orb:.1f}°)")
                     if len(major_aspects) >= 10:
                         break
 
@@ -344,9 +327,7 @@ Major Aspects:
         except (KeyError, IndexError) as e:
             logger.error(f"Failed to parse Bedrock response: {e}")
             logger.error(f"Response body: {response_body}")
-            raise BedrockError(
-                message="Invalid response format from Bedrock", original_error=str(e)
-            )
+            raise BedrockError(message="Invalid response format from Bedrock", original_error=str(e))
 
 
 # Local testing
