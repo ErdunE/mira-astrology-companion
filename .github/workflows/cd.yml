@@ -447,10 +447,84 @@ jobs:
         run: |
           cd infra/terraform
           
-          echo "Initializing Terraform with remote backend..."
-          terraform init -input=false
+          echo "================================================"
+          echo "🔧 Terraform Backend Initialization"
+          echo "================================================"
+          echo ""
           
+          echo "Backend configuration (backend.tf):"
+          echo "-----------------------------------"
+          cat backend.tf
+          echo ""
+          
+          echo "Running terraform init -reconfigure..."
+          terraform init -input=false -reconfigure
+          
+          echo ""
           echo "✅ Terraform initialized"
+          echo ""
+          
+          echo "================================================"
+          echo "🔍 Verifying Remote State Connection"
+          echo "================================================"
+          echo ""
+          
+          if [ -f terraform.tfstate ]; then
+            echo "⚠️ WARNING: Local terraform.tfstate found!"
+            echo "This suggests backend is not configured correctly."
+            ls -lh terraform.tfstate
+            echo ""
+          else
+            echo "✅ No local state file (correctly using remote backend)"
+          fi
+          
+          echo ""
+          echo "Resources in remote state:"
+          echo "-----------------------------------"
+          
+          RESOURCE_COUNT=$(terraform state list 2>&1 | grep -v "^$" | wc -l)
+          echo "  Total count: ${RESOURCE_COUNT}"
+          
+          if [ ${RESOURCE_COUNT} -eq 0 ]; then
+            echo ""
+            echo "❌ ERROR: State is EMPTY!"
+            echo ""
+            echo "Expected ~101 resources based on S3 state file."
+            echo "This means Terraform is NOT reading from remote backend."
+            echo ""
+            echo "Debugging information:"
+            echo "-----------------------------------"
+            echo "  S3 Bucket: mira-terraform-state-dev"
+            echo "  S3 Key: terraform.tfstate"
+            echo "  Region: us-east-1"
+            echo "  DynamoDB Lock Table: mira-terraform-locks"
+            echo ""
+            
+            echo "Verifying S3 state file exists:"
+            aws s3 ls s3://mira-terraform-state-dev/terraform.tfstate --human-readable
+            
+            echo ""
+            echo "Attempting to read state metadata from S3:"
+            aws s3api head-object \
+              --bucket mira-terraform-state-dev \
+              --key terraform.tfstate \
+              --query '{Size:ContentLength,LastModified:LastModified}' || echo "Failed to read S3 object"
+            
+            echo ""
+            echo "❌ ABORTING: Cannot proceed with empty state"
+            exit 1
+          else
+            echo ""
+            echo "✅ State loaded successfully from S3!"
+            echo ""
+            echo "Sample resources (first 10):"
+            terraform state list | head -10
+            echo ""
+            echo "Expected behavior: Plan should only show actual changes."
+          fi
+          
+          echo ""
+          echo "================================================"
 
       # 7. Terraform Validate
       - name: Terraform Validate
