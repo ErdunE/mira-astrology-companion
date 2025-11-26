@@ -29,3 +29,13 @@ output "frontend_website_domain" {
   description = "S3 bucket website domain"
   value       = aws_s3_bucket_website_configuration.frontend.website_domain
 }
+
+output "cloudfront_oai_arn" {
+  description = "CloudFront OAI ARN"
+  value       = aws_cloudfront_origin_access_identity.frontend.iam_arn
+}
+
+output "cloudfront_oai_path" {
+  description = "CloudFront OAI path"
+  value       = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
+}

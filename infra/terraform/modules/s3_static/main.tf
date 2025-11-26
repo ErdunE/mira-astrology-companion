@@ -47,6 +47,10 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 }
 
+resource "aws_cloudfront_origin_access_identity" "frontend" {
+  comment = "OAI for mira frontend bucket"
+}
+
 # Bucket policy to allow CloudFront/public access (if needed)
 # Note: If using CloudFront, you'll want OAI/OAC instead
 resource "aws_s3_bucket_policy" "frontend" {
@@ -59,7 +63,7 @@ resource "aws_s3_bucket_policy" "frontend" {
         Sid    = "AllowCloudFrontOAI"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${var.cloudfront_oai_id}"
+          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
         }
         Action   = "s3:GetObject"
         Resource = "${aws_s3_bucket.frontend.arn}/*"
