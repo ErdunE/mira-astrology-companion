@@ -30,7 +30,13 @@ RETRY_BACKOFF = [1, 2, 4]  # Exponential backoff in seconds
 class AstrologyAPIError(Exception):
     """Custom exception for Astrology API errors."""
 
-    def __init__(self, message: str, status_code: int = None, retry_count: int = 0, original_error: str = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = None,
+        retry_count: int = 0,
+        original_error: str = None,
+    ):
         self.message = message
         self.status_code = status_code
         self.retry_count = retry_count
@@ -101,7 +107,10 @@ class AstrologyClient:
             )
         except Exception as e:
             logger.error(f"Unexpected error retrieving API key: {e}")
-            raise AstrologyAPIError(message="Failed to initialize Astrology API client", original_error=str(e))
+            raise AstrologyAPIError(
+                message="Failed to initialize Astrology API client",
+                original_error=str(e),
+            )
 
     def get_birth_chart(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -171,7 +180,10 @@ class AstrologyClient:
 
             except Exception as e:
                 logger.error(f"Unexpected error during API call: {e}", exc_info=True)
-                raise AstrologyAPIError(message="Unexpected error calling Astrology API", original_error=str(e))
+                raise AstrologyAPIError(
+                    message="Unexpected error calling Astrology API",
+                    original_error=str(e),
+                )
 
     def _build_request_payload(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -293,7 +305,9 @@ class AstrologyClient:
 
             logger.error(error_message)
             raise AstrologyAPIError(
-                message="Astrologer API error", status_code=response.status_code, original_error=error_message
+                message="Astrologer API error",
+                status_code=response.status_code,
+                original_error=error_message,
             )
 
         return response.json()
@@ -311,7 +325,11 @@ class AstrologyClient:
         return {
             "svg_content": response.get("chart", ""),
             "chart_data": response,  # Keep complete response
-            "metadata": {"generated_at": int(time.time()), "api_provider": "astrologer", "api_version": "v4"},
+            "metadata": {
+                "generated_at": int(time.time()),
+                "api_provider": "astrologer",
+                "api_version": "v4",
+            },
         }
 
 

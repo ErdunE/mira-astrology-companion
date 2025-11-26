@@ -138,7 +138,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         user_id = extract_user_id_from_event(event)
         email = extract_email_from_event(event)
     except ValueError as e:
-        return {"statusCode": 401, "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}})}
+        return {
+            "statusCode": 401,
+            "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}}),
+        }
 
     # Parse request body
     try:
@@ -153,7 +156,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except json.JSONDecodeError:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": {"code": "INVALID_JSON", "message": "Request body must be valid JSON"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "INVALID_JSON",
+                        "message": "Request body must be valid JSON",
+                    }
+                }
+            ),
         }
 
     # Validate input
@@ -251,7 +261,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": {"code": "INTERNAL_ERROR", "message": "An unexpected error occurred"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred",
+                    }
+                }
+            ),
         }
 
     # Success response

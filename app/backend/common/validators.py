@@ -324,7 +324,11 @@ if __name__ == "__main__":
     # Test 6: Missing field (country)
     print("\n[Test 6] Missing required field (country)")
     print("-" * 60)
-    missing_field = {"birth_date": "1990-01-15", "birth_time": "14:30", "birth_location": "New York, NY"}
+    missing_field = {
+        "birth_date": "1990-01-15",
+        "birth_time": "14:30",
+        "birth_location": "New York, NY",
+    }
 
     try:
         validate_user_profile(missing_field)

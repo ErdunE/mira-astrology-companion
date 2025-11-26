@@ -22,12 +22,24 @@ def lambda_handler(event, context):
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"message": "Worker Lambda placeholder", "processed": len(event.get("Records", []))}),
+        "body": json.dumps(
+            {
+                "message": "Worker Lambda placeholder",
+                "processed": len(event.get("Records", [])),
+            }
+        ),
     }
 
 
 if __name__ == "__main__":
-    test_event = {"Records": [{"messageId": "test-message-1", "body": json.dumps({"task": "cleanup_old_charts"})}]}
+    test_event = {
+        "Records": [
+            {
+                "messageId": "test-message-1",
+                "body": json.dumps({"task": "cleanup_old_charts"}),
+            }
+        ]
+    }
 
     result = lambda_handler(test_event, None)
     print(json.dumps(result, indent=2))

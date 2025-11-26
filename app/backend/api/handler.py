@@ -15,9 +15,15 @@ def lambda_handler(event, context):
 
     return {
         "statusCode": 200,
-        "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
         "body": json.dumps(
-            {"message": "API Lambda placeholder", "requestId": context.request_id if context else "local-test"}
+            {
+                "message": "API Lambda placeholder",
+                "requestId": context.request_id if context else "local-test",
+            }
         ),
     }
 

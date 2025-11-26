@@ -98,7 +98,11 @@ class BedrockClient:
             raise BedrockError(message="Failed to build AI prompt", original_error=str(e))
 
         # Build request payload (OpenAI format)
-        request_body = {"messages": messages, "max_tokens": max_tokens, "temperature": temperature}
+        request_body = {
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
 
         messages_str = json.dumps(messages)
         logger.info(f"Prompt size: {len(messages_str)} chars")
@@ -149,7 +153,11 @@ class BedrockClient:
             logger.error(f"Error message: {error_message}")
             logger.error(f"Full response: {e.response}")
             logger.error("=" * 60)
-            raise BedrockError(message="Bedrock API call failed", error_code=error_code, original_error=error_message)
+            raise BedrockError(
+                message="Bedrock API call failed",
+                error_code=error_code,
+                original_error=error_message,
+            )
 
         except Exception as e:
             logger.error("=" * 60)
@@ -160,7 +168,12 @@ class BedrockClient:
             logger.error("Full traceback:", exc_info=True)
             raise BedrockError(message="Unexpected error during AI generation", original_error=str(e))
 
-    def _build_messages(self, user_profile: Dict[str, Any], chart_data: Dict[str, Any], user_question: str) -> list:
+    def _build_messages(
+        self,
+        user_profile: Dict[str, Any],
+        chart_data: Dict[str, Any],
+        user_question: str,
+    ) -> list:
         """
         Build OpenAI-format messages with astrological context.
 
@@ -193,7 +206,10 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
         # User message - Include context and question
         user_context = self._format_user_context(user_profile, chart_data)
 
-        user_message = {"role": "user", "content": f"{user_context}\n\nQuestion: {user_question}"}
+        user_message = {
+            "role": "user",
+            "content": f"{user_context}\n\nQuestion: {user_question}",
+        }
 
         return [system_message, user_message]
 
@@ -216,7 +232,17 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
 
         # Extract KEY planets only
         chart_planets = chart_data.get("data", {})
-        key_planets = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "ascendant", "medium_coeli"]
+        key_planets = [
+            "sun",
+            "moon",
+            "mercury",
+            "venus",
+            "mars",
+            "jupiter",
+            "saturn",
+            "ascendant",
+            "medium_coeli",
+        ]
 
         planets_summary = []
         for planet in key_planets:
@@ -231,8 +257,21 @@ When analyzing charts, consider planetary positions, aspects, and houses to prov
 
         # Extract MAJOR aspects only
         all_aspects = chart_data.get("aspects", [])
-        important_aspect_types = ["conjunction", "opposition", "trine", "square", "sextile"]
-        key_planets_for_aspects = ["Sun", "Moon", "Ascendant", "Mercury", "Venus", "Mars"]
+        important_aspect_types = [
+            "conjunction",
+            "opposition",
+            "trine",
+            "square",
+            "sextile",
+        ]
+        key_planets_for_aspects = [
+            "Sun",
+            "Moon",
+            "Ascendant",
+            "Mercury",
+            "Venus",
+            "Mars",
+        ]
 
         major_aspects = []
         for aspect in all_aspects[:20]:
@@ -335,7 +374,10 @@ if __name__ == "__main__":
 
     try:
         result = client.generate_response(
-            user_profile=test_profile, chart_data=test_chart_data, user_question=test_question, max_tokens=500
+            user_profile=test_profile,
+            chart_data=test_chart_data,
+            user_question=test_question,
+            max_tokens=500,
         )
 
         print("\n✓ AI response generated successfully!")

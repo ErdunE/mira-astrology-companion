@@ -198,7 +198,13 @@ if __name__ == "__main__":
         """Test error handling for ResourceNotFoundException"""
         mock_client = Mock()
         mock_client.get_secret_value.side_effect = ClientError(
-            {"Error": {"Code": "ResourceNotFoundException", "Message": "Secret not found"}}, "GetSecretValue"
+            {
+                "Error": {
+                    "Code": "ResourceNotFoundException",
+                    "Message": "Secret not found",
+                }
+            },
+            "GetSecretValue",
         )
         mock_boto.return_value = mock_client
 
@@ -224,7 +230,8 @@ if __name__ == "__main__":
         """Test error handling for AccessDeniedException"""
         mock_client = Mock()
         mock_client.get_secret_value.side_effect = ClientError(
-            {"Error": {"Code": "AccessDeniedException", "Message": "Access denied"}}, "GetSecretValue"
+            {"Error": {"Code": "AccessDeniedException", "Message": "Access denied"}},
+            "GetSecretValue",
         )
         mock_boto.return_value = mock_client
 
