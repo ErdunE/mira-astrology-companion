@@ -53,7 +53,7 @@ resource "aws_dynamodb_table" "conversations" {
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key  = "user_id"
-  range_key = "sk" 
+  range_key = "sk"
 
   attribute {
     name = "user_id"
@@ -61,7 +61,7 @@ resource "aws_dynamodb_table" "conversations" {
   }
 
   attribute {
-    name = "sk" 
+    name = "sk"
     type = "S"
   }
 
