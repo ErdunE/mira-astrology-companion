@@ -53,7 +53,7 @@ resource "aws_dynamodb_table" "conversations" {
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key  = "user_id"
-  range_key = "created_at"
+  range_key = "sk"
 
   attribute {
     name = "user_id"
@@ -61,7 +61,7 @@ resource "aws_dynamodb_table" "conversations" {
   }
 
   attribute {
-    name = "created_at"
+    name = "sk"
     type = "S"
   }
 
@@ -77,7 +77,6 @@ resource "aws_dynamodb_table" "conversations" {
 
   server_side_encryption {
     enabled = true
-    # Using AWS owned CMK; if you later want a specific CMK, add kms_key_arn here.
   }
 
   tags = merge(local.common_tags, {
