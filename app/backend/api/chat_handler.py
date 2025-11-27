@@ -87,43 +87,20 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         user_id = extract_user_id_from_event(event)
     except ValueError as e:
-        return {
-            "statusCode": 401,
-            "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}}),
-        }
+        return {"statusCode": 401, "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}})}
 
     # Parse request body
-    if "parsed_body" in event:
-        body = event["parsed_body"]
-    else:
-        try:
-            body = json.loads(event.get("body", "{}"))
-        except json.JSONDecodeError:
-            return {
-                "statusCode": 400,
-                "body": json.dumps(
-                    {
-                        "error": {
-                            "code": "INVALID_JSON",
-                            "message": "Invalid request body",
-                        }
-                    }
-                ),
-            }
+    body = event.get("body_json", {})
+    if not body:
+        body = event.get("parsed_body", {})
 
     user_message = body.get("message", "").strip()
+    conversation_id = body.get("conversation_id")
 
     if not user_message:
         return {
             "statusCode": 400,
-            "body": json.dumps(
-                {
-                    "error": {
-                        "code": "MISSING_MESSAGE",
-                        "message": "Message field is required",
-                    }
-                }
-            ),
+            "body": json.dumps({"error": {"code": "MISSING_MESSAGE", "message": "Message field is required"}}),
         }
 
     logger.info(f"User message: {user_message[:100]}...")
@@ -149,14 +126,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Failed to get user profile: {e}")
         return {
             "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "error": {
-                        "code": "PROFILE_ERROR",
-                        "message": "Failed to retrieve user profile",
-                    }
-                }
-            ),
+            "body": json.dumps({"error": {"code": "PROFILE_ERROR", "message": "Failed to retrieve user profile"}}),
         }
 
     # Step 2: Check for cached chart
@@ -165,14 +135,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not chart_data:
         return {
             "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "error": {
-                        "code": "CHART_ERROR",
-                        "message": "Failed to generate or retrieve chart",
-                    }
-                }
-            ),
+            "body": json.dumps({"error": {"code": "CHART_ERROR", "message": "Failed to generate or retrieve chart"}}),
         }
 
     logger.info(f"Chart {'retrieved from cache' if is_cache_hit else 'generated'}")
@@ -190,35 +153,28 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Bedrock error: {e}")
         return {
             "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "error": {
-                        "code": "AI_ERROR",
-                        "message": "Failed to generate AI response",
-                    }
-                }
-            ),
+            "body": json.dumps({"error": {"code": "AI_ERROR", "message": "Failed to generate AI response"}}),
         }
 
     # Step 4: Save conversation
     try:
-        conversation_id = save_conversation(user_id, user_message, ai_response, chart_url)
-        logger.info(f"Conversation saved: {conversation_id}")
+        result_conversation_id = save_conversation(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            user_message=user_message,
+            ai_response=ai_response,
+            chart_url=chart_url,
+        )
+        logger.info(f"Conversation saved: {result_conversation_id}")
     except Exception as e:
         logger.error(f"Failed to save conversation: {e}")
         # Don't fail the request, just log the error
-        conversation_id = None
+        result_conversation_id = None
 
     # Success response
     return {
         "statusCode": 200,
-        "body": json.dumps(
-            {
-                "message": ai_response,
-                "chart_url": chart_url,
-                "conversation_id": conversation_id,
-            }
-        ),
+        "body": json.dumps({"conversation_id": result_conversation_id, "message": ai_response, "chart_url": chart_url}),
     }
 
 
@@ -283,12 +239,7 @@ def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[O
         timestamp = current_time
         s3_key = f"charts/{user_id}/{timestamp}.svg"
 
-        s3_client.put_object(
-            Bucket=CHARTS_BUCKET,
-            Key=s3_key,
-            Body=svg_content,
-            ContentType="image/svg+xml",
-        )
+        s3_client.put_object(Bucket=CHARTS_BUCKET, Key=s3_key, Body=svg_content, ContentType="image/svg+xml")
 
         chart_url = f"https://{CHARTS_BUCKET}.s3.amazonaws.com/{s3_key}"
         logger.info(f"Chart saved to S3: {s3_key}")
@@ -332,30 +283,101 @@ def update_profile_with_chart(user_id: str, s3_path: str, timestamp: int, chart_
         raise
 
 
-def save_conversation(user_id: str, user_message: str, ai_response: str, chart_url: Optional[str]) -> str:
-    """Save conversation to DynamoDB."""
+def save_conversation(
+    user_id: str, conversation_id: Optional[str], user_message: str, ai_response: str, chart_url: Optional[str]
+) -> str:
+    """
+    Save conversation message to DynamoDB using thread-based schema.
+
+    If conversation_id is provided:
+        - Validates conversation exists and user owns it
+        - Saves message to existing conversation
+        - Updates conversation metadata
+
+    If conversation_id is None:
+        - Creates new conversation with AI-generated title
+        - Saves first message
+
+    Returns:
+        conversation_id (existing or newly created)
+    """
+    from common.conversation_utils import (
+        generate_conversation_id,
+        generate_conversation_title,
+        build_conversation_metadata_item,
+        build_message_item,
+        update_conversation_metadata,
+    )
+
     table = dynamodb.Table(CONVERSATIONS_TABLE)
 
-    conversation_id = f"conv-{int(time.time())}-{user_id[:8]}"
-    timestamp = time.time()
-    created_at = f"{int(timestamp)}"  # String format for sort key
+    # Case 1: No conversation_id - create new conversation
+    if not conversation_id:
+        logger.info("Creating new conversation for first message")
 
-    item = {
-        "user_id": user_id,
-        "created_at": created_at,
-        "conversation_id": conversation_id,
-        "user_message": user_message,
-        "ai_response": ai_response,
-        "chart_url": chart_url or "",
-        "timestamp_epoch": int(timestamp),
-    }
+        conversation_id = generate_conversation_id()
+
+        # Generate title using Bedrock
+        try:
+            title = generate_conversation_title(user_message, bedrock_client)
+        except Exception as e:
+            logger.warning(f"Failed to generate AI title: {e}")
+            title = generate_conversation_title(user_message, None)
+
+        # Create metadata item
+        metadata_item = build_conversation_metadata_item(user_id=user_id, conversation_id=conversation_id, title=title)
+
+        try:
+            table.put_item(Item=metadata_item)
+            logger.info(f"Created conversation: {conversation_id} with title: {title}")
+        except ClientError as e:
+            logger.error(f"Failed to create conversation metadata: {e}")
+            raise
+
+    # Case 2: conversation_id provided - validate ownership
+    else:
+        logger.info(f"Adding message to existing conversation: {conversation_id}")
+
+        try:
+            metadata_response = table.get_item(Key={"user_id": user_id, "sk": f"CONV#{conversation_id}"})
+
+            if "Item" not in metadata_response:
+                raise ValueError(f"Conversation not found: {conversation_id}")
+
+            if metadata_response["Item"].get("deleted", False):
+                raise ValueError("Cannot add message to deleted conversation")
+
+        except ClientError as e:
+            logger.error(f"Failed to verify conversation: {e}")
+            raise
+
+    # Build and save message item
+    message_item = build_message_item(
+        user_id=user_id,
+        conversation_id=conversation_id,
+        user_message=user_message,
+        ai_response=ai_response,
+        chart_url=chart_url,
+        ttl_days=30,
+    )
 
     try:
-        table.put_item(Item=item)
-        logger.info(f"Conversation saved: {conversation_id}")
+        table.put_item(Item=message_item)
+        logger.info(f"Saved message to conversation: {conversation_id}")
+
+        # Update conversation metadata
+        update_conversation_metadata(
+            table=table,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            increment_message_count=True,
+            new_message_preview=user_message,
+        )
+
         return conversation_id
+
     except ClientError as e:
-        logger.error(f"Failed to save conversation: {e}")
+        logger.error(f"Failed to save message: {e}")
         raise
 
 
