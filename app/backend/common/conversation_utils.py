@@ -69,24 +69,24 @@ def generate_conversation_title(first_message: str, bedrock_client=None) -> str:
             else:
                 ai_title = str(ai_result)
 
-            logger.info(f"Raw AI title response: {ai_title[:200]}")  
+            logger.info(f"Raw AI title response: {ai_title[:200]}")
 
             # Clean up reasoning tags (Bedrock sometimes includes these)
             # Strategy: Remove <reasoning>...</reasoning> blocks, but keep text after
-            ai_title = re.sub(r'<reasoning>.*?</reasoning>\s*', '', ai_title, flags=re.DOTALL)
+            ai_title = re.sub(r"<reasoning>.*?</reasoning>\s*", "", ai_title, flags=re.DOTALL)
             # Remove any orphaned opening tag
-            ai_title = re.sub(r'^.*?<reasoning>\s*', '', ai_title)
+            ai_title = re.sub(r"^.*?<reasoning>\s*", "", ai_title)
             # Remove any orphaned closing tag and everything before it
-            ai_title = re.sub(r'^.*?</reasoning>\s*', '', ai_title)
+            ai_title = re.sub(r"^.*?</reasoning>\s*", "", ai_title)
 
-            logger.info(f"Cleaned AI title: {ai_title[:100]}")  
+            logger.info(f"Cleaned AI title: {ai_title[:100]}")
             title = ai_title.strip().strip("\"'")
 
             if title and len(title) <= 100:
                 logger.info(f"AI-generated title: {title}")
                 return title
             else:
-                logger.warning(f"AI title empty or too long after cleaning, using fallback") 
+                logger.warning("AI title empty or too long after cleaning, using fallback")
 
         except Exception as e:
             logger.warning(f"Failed to generate AI title: {e}")
