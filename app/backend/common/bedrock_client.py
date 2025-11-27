@@ -140,6 +140,12 @@ class BedrockClient:
             # Parse response
             response_body = json.loads(response["body"].read())
             logger.info(f"Response keys: {list(response_body.keys())}")
+            if "usage" in response_body:
+                usage = response_body["usage"]
+                logger.info(f"Token usage: {usage}")
+                logger.info(f"  Prompt tokens: {usage.get('prompt_tokens', 'N/A')}")
+                logger.info(f"  Completion tokens: {usage.get('completion_tokens', 'N/A')}")
+                logger.info(f"  Total tokens: {usage.get('total_tokens', 'N/A')}")
             logger.info("Bedrock response received successfully")
 
             return self._parse_response(response_body)

@@ -19,7 +19,6 @@ import boto3
 from botocore.exceptions import ClientError
 
 from common.api_wrapper import api_handler
-from common.jwt_utils import extract_user_from_event
 from common.conversation_utils import (
     generate_conversation_id,
     build_conversation_metadata_item,
@@ -42,6 +41,29 @@ DEFAULT_MESSAGE_LIMIT = 50
 MAX_MESSAGE_LIMIT = 200
 
 
+def extract_user_id_from_event(event: Dict[str, Any]) -> str:
+    """Extract user_id from JWT claims."""
+    try:
+        # Check if event was wrapped by api_handler
+        if "raw_event" in event:
+            event = event["raw_event"]
+
+        authorizer = event["requestContext"]["authorizer"]
+
+        if "jwt" in authorizer:
+            claims = authorizer["jwt"]["claims"]
+        else:
+            claims = authorizer["claims"]
+
+        user_id = claims["sub"]
+        logger.info(f"Extracted user_id: {user_id}")
+        return user_id
+
+    except (KeyError, TypeError) as e:
+        logger.error(f"Failed to extract user_id: {e}")
+        raise ValueError("Unable to extract user identity from request")
+
+
 @api_handler
 def create_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -61,10 +83,13 @@ def create_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     """
     # Extract user ID from JWT
-    user_id = extract_user_from_event(event)
+    user_id = extract_user_id_from_event(event)
 
     # Parse request body
     body = event.get("body_json", {})
+    if not body:
+        body = event.get("parsed_body", {})
+
     custom_title = body.get("title", "").strip()
 
     # Generate conversation ID
@@ -125,7 +150,7 @@ def list_conversations(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     """
     # Extract user ID from JWT
-    user_id = extract_user_from_event(event)
+    user_id = extract_user_id_from_event(event)
 
     # Parse query parameters
     query_params = event.get("query_params", {})
@@ -147,10 +172,9 @@ def list_conversations(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 ":metadata": "METADATA",
                 ":deleted_false": False,
             },
-            # Filter for metadata items only and not deleted
             "FilterExpression": "item_type = :metadata AND (attribute_not_exists(deleted) OR deleted = :deleted_false)",
-            "Limit": limit,
-            "ScanIndexForward": False,  # Sort by updated_at descending (newest first)
+            # Note: No Limit here, we need to fetch all conversations to sort by updated_at
+            "ScanIndexForward": True,  # Fetch all items (sk order doesn't matter, we'll sort in Python)
         }
 
         # Add pagination token if provided
@@ -172,6 +196,9 @@ def list_conversations(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         # Sort by updated_at (most recent first)
         conversations.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
+
+        # Apply limit after sorting
+        conversations = conversations[:limit]
 
         # Build response
         result = {
@@ -225,7 +252,7 @@ def get_conversation_messages(event: Dict[str, Any], context: Any) -> Dict[str, 
         }
     """
     # Extract user ID from JWT
-    user_id = extract_user_from_event(event)
+    user_id = extract_user_id_from_event(event)
 
     # Extract conversation_id from path
     path_params = event.get("path_params", {})
@@ -326,7 +353,7 @@ def delete_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     """
     # Extract user ID from JWT
-    user_id = extract_user_from_event(event)
+    user_id = extract_user_id_from_event(event)
 
     # Extract conversation_id from path
     path_params = event.get("path_params", {})
@@ -388,7 +415,7 @@ def update_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     """
     # Extract user ID from JWT
-    user_id = extract_user_from_event(event)
+    user_id = extract_user_id_from_event(event)
 
     # Extract conversation_id from path
     path_params = event.get("path_params", {})
@@ -399,6 +426,9 @@ def update_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     # Parse request body
     body = event.get("body_json", {})
+    if not body:
+        body = event.get("parsed_body", {})
+
     new_title = body.get("title", "").strip()
 
     if not new_title:

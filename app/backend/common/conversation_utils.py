@@ -10,8 +10,10 @@ Provides helpers for:
 import time
 import uuid
 import logging
+import re
 from datetime import datetime
 from typing import Dict, Any, Optional
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -48,32 +50,43 @@ def generate_conversation_title(first_message: str, bedrock_client=None) -> str:
     # Try AI-generated title
     if bedrock_client:
         try:
-            title_prompt = f"""Generate a concise 3-5 word title in the same language as the question.
+            title_prompt = f"""Generate ONLY a concise 3-5 word title. Do not explain or add reasoning.
 
-Question: {first_message}
+            Question: {first_message}
 
-Rules:
-- Maximum 5 words
-- Capture the main topic
-- Use the same language as the question
-- Do not use quotes
-- Examples: "Career Guidance" or "事业运势咨询"
+            Output ONLY the title (3-5 words, no quotes, same language as question):"""
 
-Title:"""
-
-            ai_title = bedrock_client.generate_response(
+            ai_result = bedrock_client.generate_response(
                 user_profile={},
                 chart_data={},
                 user_question=title_prompt,
-                max_tokens=20,
+                max_tokens=500,
             )
 
-            # Clean up response
+            # Extract response string from dict
+            if isinstance(ai_result, dict):
+                ai_title = ai_result.get("response", "")
+            else:
+                ai_title = str(ai_result)
+
+            logger.info(f"Raw AI title response: {ai_title[:200]}")
+
+            # Clean up reasoning tags (Bedrock sometimes includes these)
+            # Strategy: Remove <reasoning>...</reasoning> blocks, but keep text after
+            ai_title = re.sub(r"<reasoning>.*?</reasoning>\s*", "", ai_title, flags=re.DOTALL)
+            # Remove any orphaned opening tag
+            ai_title = re.sub(r"^.*?<reasoning>\s*", "", ai_title)
+            # Remove any orphaned closing tag and everything before it
+            ai_title = re.sub(r"^.*?</reasoning>\s*", "", ai_title)
+
+            logger.info(f"Cleaned AI title: {ai_title[:100]}")
             title = ai_title.strip().strip("\"'")
 
             if title and len(title) <= 100:
                 logger.info(f"AI-generated title: {title}")
                 return title
+            else:
+                logger.warning("AI title empty or too long after cleaning, using fallback")
 
         except Exception as e:
             logger.warning(f"Failed to generate AI title: {e}")
@@ -186,10 +199,16 @@ def format_conversation_for_response(metadata_item: Dict[str, Any]) -> Dict[str,
     Returns:
         dict: Formatted conversation object for API response
     """
+
+    def decimal_to_int(value):
+        if isinstance(value, Decimal):
+            return int(value)
+        return value if value is not None else 0
+
     return {
         "conversation_id": metadata_item.get("conversation_id", ""),
         "title": metadata_item.get("title", "Untitled"),
-        "message_count": metadata_item.get("message_count", 0),
+        "message_count": decimal_to_int(metadata_item.get("message_count", 0)),
         "created_at": metadata_item.get("created_at", ""),
         "updated_at": metadata_item.get("updated_at", ""),
         "last_message_preview": metadata_item.get("last_message_preview", ""),
@@ -206,14 +225,19 @@ def format_message_for_response(message_item: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         dict: Formatted message object for API response
     """
+
+    def decimal_to_int(value):
+        if isinstance(value, Decimal):
+            return int(value)
+        return value if value is not None else 0
+
     formatted = {
-        "timestamp": message_item.get("timestamp_epoch", 0),
+        "timestamp": decimal_to_int(message_item.get("timestamp_epoch", 0)),  # ← 改这里
         "created_at": message_item.get("created_at", ""),
         "user_message": message_item.get("user_message", ""),
         "ai_response": message_item.get("ai_response", ""),
     }
 
-    # Add chart URL if present
     if "chart_url" in message_item:
         formatted["chart_url"] = message_item["chart_url"]
 
