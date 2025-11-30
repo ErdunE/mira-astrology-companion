@@ -219,7 +219,6 @@ resource "aws_lambda_permission" "api_keep_warm" {
 
 
 
-
 resource "aws_cloudwatch_metric_alarm" "mira_api_errors" {
   alarm_name          = "mira-api-dev-errors"
   alarm_description   = "Alarm when mira-api-dev Lambda has >=1 errors in 1 minute (for testing)."
