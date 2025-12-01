@@ -136,7 +136,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   is_ipv6_enabled     = true
   comment             = "CloudFront distribution for Mira frontend SPA"
   default_root_object = "index.html"
-  
+
   # Use the most cost-effective price class (North America + Europe only)
   price_class = "PriceClass_100"
 
@@ -156,19 +156,19 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     forwarded_values {
       query_string = false
-      
+
       cookies {
         forward = "none"
       }
-      
+
       headers = []
     }
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 3600    # 1 hour
-    max_ttl                = 86400   # 24 hours
-    compress               = true    # Enable gzip compression
+    default_ttl            = 3600  # 1 hour
+    max_ttl                = 86400 # 24 hours
+    compress               = true  # Enable gzip compression
   }
 
   # Custom error responses for SPA routing
@@ -196,7 +196,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   viewer_certificate {
     cloudfront_default_certificate = true
     minimum_protocol_version       = "TLSv1.2_2021"
-    
+
     # If you want to use a custom domain, uncomment and configure:
     # acm_certificate_arn      = var.acm_certificate_arn
     # ssl_support_method       = "sni-only"
