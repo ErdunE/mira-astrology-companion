@@ -47,21 +47,21 @@ output "cognito_hosted_ui_base_url" {
 }
 
 
-module "events_messaging" {
-  source = "./modules/events_messaging"
-}
+# module "events_messaging" {
+#   source = "./modules/events_messaging"
+# }
 
-output "events_event_bus_name" {
-  value = module.events_messaging.event_bus_name
-}
+# output "events_event_bus_name" {
+#   value = module.events_messaging.event_bus_name
+# }
 
-output "events_main_queue_url" {
-  value = module.events_messaging.main_queue_url
-}
+# output "events_main_queue_url" {
+#   value = module.events_messaging.main_queue_url
+# }
 
-output "events_dlq_queue_url" {
-  value = module.events_messaging.dlq_url
-}
+# output "events_dlq_queue_url" {
+#   value = module.events_messaging.dlq_url
+# }
 
 
 module "dynamodb_mira" {
@@ -217,43 +217,6 @@ resource "aws_lambda_permission" "api_keep_warm" {
   source_arn    = aws_cloudwatch_event_rule.api_keep_warm.arn
 }
 
-
-module "worker_lambda" {
-  source = "./modules/lambda_worker"
-
-  environment   = "dev"
-  name_prefix   = "mira"
-  function_name = "mira-worker-dev"
-  runtime       = "python3.10"
-  handler       = "handler.lambda_handler"
-  source_dir    = "${path.root}/lambda_src/worker"
-  memory_size   = 256
-  timeout       = 30
-  environment_variables = {
-    STAGE                        = "dev"
-    DYNAMODB_PROFILES_TABLE      = module.dynamodb_mira.user_profiles_table_name
-    DYNAMODB_CONVERSATIONS_TABLE = module.dynamodb_mira.conversations_table_name
-
-    ASTROLOGY_SECRET_NAME = "/mira/astrology/api_key"
-  }
-
-  dynamodb_conversations_arn = module.dynamodb_mira.conversations_table_arn
-
-  # SQS trigger
-  sqs_queue_arn = module.events_messaging.main_queue_arn
-  batch_size    = 5
-
-  astrologer_api_secret_arn = module.secrets_astrologer.astrologer_api_secret_arn
-
-  # VPC Configuration: Using a private subnet + Bedrock VPC Endpoint SG
-  subnet_ids         = module.network_vpc.private_subnet_ids
-  security_group_ids = [module.bedrock_vpce.security_group_id]
-}
-
-output "worker_lambda_arn" {
-  value       = module.worker_lambda.function_arn
-  description = "Worker Lambda ARN"
-}
 
 resource "aws_cloudwatch_metric_alarm" "mira_api_errors" {
   alarm_name          = "mira-api-dev-errors"
