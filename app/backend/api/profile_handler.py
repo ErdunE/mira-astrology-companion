@@ -68,6 +68,7 @@ def extract_user_id_from_event(event: Dict[str, Any]) -> str:
         logger.error(f"Event structure: {json.dumps(event, default=str)}")
         raise ValueError("Unable to extract user identity from request")
 
+
 def extract_email_from_event(event: Dict[str, Any]) -> str:
     """
     Extract email from JWT claims (optional).
