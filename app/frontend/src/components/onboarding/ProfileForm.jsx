@@ -151,7 +151,7 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                   {formData.birth_date ? (
                     <span className="text-white">{format(formData.birth_date, 'PPP')}</span>
                   ) : (
-                    <span className="text-purple-300/70">Select your birth date</span>
+                    <span className="text-purple-300/70">Select your date of birth</span>
                   )}
                 </Button>
               </PopoverTrigger>
