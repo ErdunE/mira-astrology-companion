@@ -17,12 +17,12 @@ module "cognito_auth" {
   # This is a placeholder URL; you can replace it with the actual frontend/API URL later.
   callback_urls = [
     "http://localhost:5173/callback",  # For local dev
-    "https://your-domain.com/callback" # For production (when deployed)
+    "https://dpa3zp0ku6hv4.cloudfront.net/callback" # For production (when deployed)
   ]
 
   logout_urls = [
     "http://localhost:5173/",  # For local dev
-    "https://your-domain.com/" # For production
+    "https://dpa3zp0ku6hv4.cloudfront.net/" # For production
   ]
 
   tags = {
