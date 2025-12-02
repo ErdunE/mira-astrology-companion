@@ -1,7 +1,39 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/**
+ * Fix malformed inline markdown tables by inserting proper newlines
+ * Handles cases where LLM outputs tables all on one line like:
+ * "| Header | Header | |---|---| | Cell | Cell | | Cell | Cell |"
+ * 
+ * Converts to properly formatted:
+ * | Header | Header |
+ * |---|---|
+ * | Cell | Cell |
+ * | Cell | Cell |
+ */
+function fixMalformedTables(text) {
+  if (!text) return '';
+  
+  let result = text;
+  
+  // Step 1: Add newline before separator rows (|---|---|)
+  // Matches: "| content | |---" and adds newline before the separator
+  result = result.replace(/\|\s*(\|[-:]+[-:\s|]+\|)/g, '|\n$1');
+  
+  // Step 2: Add newline after separator rows  
+  // Matches: "---|---| |" (separator followed by content) and adds newline
+  result = result.replace(/([-:]+\|)\s*\|\s*(?=[A-Za-z0-9])/g, '$1\n| ');
+  
+  // Step 3: Fix row boundaries - when we have "| content | | content" (end of row, start of new row)
+  // This catches: "stretch. | | Feeling" pattern
+  result = result.replace(/\|\s*\|\s*(?=[A-Za-z])/g, '|\n| ');
+  
+  return result;
+}
 
 /**
  * Filter AI response to remove reasoning/thinking tags and only show user-facing content
@@ -25,6 +57,9 @@ function filterAIResponse(response) {
   // Remove <answer> tags but keep content
   filtered = filtered.replace(/<answer>/gi, '');
   filtered = filtered.replace(/<\/answer>/gi, '');
+  
+  // Fix malformed inline tables
+  filtered = fixMalformedTables(filtered);
   
   // Clean up excessive whitespace
   filtered = filtered.replace(/\n{3,}/g, '\n\n');
@@ -79,6 +114,7 @@ export default function MessageBubble({ message, isPending = false }) {
               <div className="rounded-2xl px-4 py-3 bg-white/10 backdrop-blur-sm border border-purple-400/30 text-purple-50">
                 <ReactMarkdown
                   className="text-sm prose prose-sm prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     p: ({ children }) => <p className="my-1 leading-relaxed">{children}</p>,
                     ul: ({ children }) => <ul className="my-1 ml-4 list-disc">{children}</ul>,
@@ -109,6 +145,39 @@ export default function MessageBubble({ message, isPending = false }) {
                       >
                         {children}
                       </a>
+                    ),
+                    // Table components for GFM table support
+                    table: ({ children }) => (
+                      <div className="my-3 overflow-x-auto rounded-lg border border-purple-400/30">
+                        <table className="w-full text-left text-sm">
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    thead: ({ children }) => (
+                      <thead className="bg-purple-500/20 text-purple-100 font-semibold">
+                        {children}
+                      </thead>
+                    ),
+                    tbody: ({ children }) => (
+                      <tbody className="divide-y divide-purple-400/20">
+                        {children}
+                      </tbody>
+                    ),
+                    tr: ({ children }) => (
+                      <tr className="hover:bg-purple-500/10 transition-colors">
+                        {children}
+                      </tr>
+                    ),
+                    th: ({ children }) => (
+                      <th className="px-3 py-2 text-purple-100 font-semibold border-b border-purple-400/30">
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="px-3 py-2 text-purple-50">
+                        {children}
+                      </td>
                     ),
                   }}
                 >
