@@ -36,11 +36,30 @@ function fixMalformedTables(text) {
 }
 
 /**
+ * Error message shown when LLM runs out of tokens before generating an answer
+ */
+const TOKEN_LIMIT_ERROR_MESSAGE = `⚠️ **Your question was too complex for me to fully answer.**
+
+I ran out of processing capacity while thinking through your request. This happens with very detailed or multi-part questions.
+
+**Try one of these:**
+- Break your question into smaller, focused parts
+- Ask about one specific topic at a time
+- Simplify your request
+
+For example, instead of asking about everything at once, try: *"What does my Sun sign say about my career?"*`;
+
+/**
  * Filter AI response to remove reasoning/thinking tags and only show user-facing content
  * Handles patterns like <reasoning>...</reasoning> or <thinking>...</thinking>
+ * 
+ * If the LLM used all tokens for reasoning and produced no answer, returns an error message
  */
 function filterAIResponse(response) {
   if (!response) return '';
+  
+  // Check if the response contains reasoning/thinking tags (to detect token limit issue later)
+  const hadReasoningTags = /<(reasoning|thinking)>/i.test(response);
   
   let filtered = response;
   
@@ -64,7 +83,15 @@ function filterAIResponse(response) {
   // Clean up excessive whitespace
   filtered = filtered.replace(/\n{3,}/g, '\n\n');
   
-  return filtered.trim();
+  const trimmedResult = filtered.trim();
+  
+  // If the original response had reasoning tags but after filtering we have no content,
+  // it means the LLM used all tokens for reasoning and ran out before generating an answer
+  if (!trimmedResult && hadReasoningTags) {
+    return TOKEN_LIMIT_ERROR_MESSAGE;
+  }
+  
+  return trimmedResult;
 }
 
 /**
