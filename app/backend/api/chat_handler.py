@@ -216,7 +216,7 @@ def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[O
 
     # Cache Hit - use cached data
     if is_cache_valid:
-        chart_url = f"https://{CHARTS_BUCKET}.s3.amazonaws.com/{chart_s3_path}"
+        chart_url = generate_presigned_chart_url(CHARTS_BUCKET, chart_s3_path)
 
         logger.info(f"Cached chart data type: {type(cached_chart_data)}")
         logger.info(
@@ -241,7 +241,7 @@ def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[O
 
         s3_client.put_object(Bucket=CHARTS_BUCKET, Key=s3_key, Body=svg_content, ContentType="image/svg+xml")
 
-        chart_url = f"https://{CHARTS_BUCKET}.s3.amazonaws.com/{s3_key}"
+        chart_url = generate_presigned_chart_url(CHARTS_BUCKET, s3_key)
         logger.info(f"Chart saved to S3: {s3_key}")
 
         # Update user profile with chart metadata
@@ -282,6 +282,19 @@ def update_profile_with_chart(user_id: str, s3_path: str, timestamp: int, chart_
         logger.error(f"Failed to update profile with chart metadata: {e}")
         raise
 
+def generate_presigned_chart_url(bucket: str, s3_key: str, expiration: int = 86400) -> str:
+    """Generate presigned URL for private S3 chart access."""
+    try:
+        url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': s3_key},
+            ExpiresIn=expiration
+        )
+        logger.info(f"Generated presigned URL (expires in {expiration}s)")
+        return url
+    except Exception as e:
+        logger.error(f"Failed to generate presigned URL: {e}")
+        return f"https://{bucket}.s3.amazonaws.com/{s3_key}"
 
 def save_conversation(
     user_id: str, conversation_id: Optional[str], user_message: str, ai_response: str, chart_url: Optional[str]
