@@ -282,19 +282,19 @@ def update_profile_with_chart(user_id: str, s3_path: str, timestamp: int, chart_
         logger.error(f"Failed to update profile with chart metadata: {e}")
         raise
 
+
 def generate_presigned_chart_url(bucket: str, s3_key: str, expiration: int = 86400) -> str:
     """Generate presigned URL for private S3 chart access."""
     try:
         url = s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket, 'Key': s3_key},
-            ExpiresIn=expiration
+            "get_object", Params={"Bucket": bucket, "Key": s3_key}, ExpiresIn=expiration
         )
         logger.info(f"Generated presigned URL (expires in {expiration}s)")
         return url
     except Exception as e:
         logger.error(f"Failed to generate presigned URL: {e}")
         return f"https://{bucket}.s3.amazonaws.com/{s3_key}"
+
 
 def save_conversation(
     user_id: str, conversation_id: Optional[str], user_message: str, ai_response: str, chart_url: Optional[str]
