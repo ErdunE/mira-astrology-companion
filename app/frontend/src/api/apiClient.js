@@ -33,7 +33,22 @@ class ApiClient {
           window.location.href = '/';
           throw new Error('Unauthorized');
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        
+        // For 404, return the error response body instead of throwing
+        if (response.status === 404) {
+          const errorData = await response.json().catch(() => ({ error: 'Not found' }));
+          const error = new Error('Not found');
+          error.status = 404;
+          error.data = errorData;
+          throw error;
+        }
+        
+        // For other errors, try to get error details from response
+        const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+        const error = new Error(JSON.stringify(errorData));
+        error.status = response.status;
+        error.data = errorData;
+        throw error;
       }
 
       return await response.json();
@@ -74,6 +89,62 @@ class ApiClient {
   };
 
   // User Profile endpoints
+  profile = {
+    // Create a new user profile (POST /profile)
+    // Backend returns: {"message": "...", "profile": {...}}
+    create: async (data) => {
+      const response = await this.request('/profile', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+    
+    // Get user profile (GET /profile)
+    // Backend returns: {"profile": {...}} - we unwrap it for convenience
+    // Note: Sometimes API Gateway returns raw Lambda format with statusCode/body
+    get: async () => {
+      const response = await this.request('/profile', {
+        method: 'GET',
+      });
+      
+      // Handle raw Lambda response format (statusCode + body as string)
+      const unwrapped = this._unwrapLambdaResponse(response);
+      
+      // Unwrap the profile from the response
+      return unwrapped.profile || unwrapped;
+    },
+    
+    // Update user profile (PUT /profile)
+    update: async (data) => {
+      const response = await this.request('/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+  };
+  
+  /**
+   * Helper to unwrap raw Lambda response format.
+   * Sometimes API Gateway returns: {"statusCode": 200, "body": "{...json string...}"}
+   * This helper detects and parses such responses.
+   */
+  _unwrapLambdaResponse(response) {
+    // Check if response is in raw Lambda format (has statusCode and body as string)
+    if (response && typeof response.statusCode === 'number' && typeof response.body === 'string') {
+      try {
+        console.log('📦 Unwrapping raw Lambda response format');
+        return JSON.parse(response.body);
+      } catch (e) {
+        console.warn('Failed to parse Lambda response body:', e);
+        return response;
+      }
+    }
+    return response;
+  }
+
+  // Legacy User Profile endpoints (kept for backward compatibility)
   entities = {
     UserProfile: {
       filter: async (filters) => {
@@ -106,25 +177,31 @@ class ApiClient {
   // Agent/Chat endpoints
   agents = {
     listConversations: async ({ agent_name }) => {
-      return this.request(`/conversations?agent_name=${agent_name}`);
+      const response = await this.request(`/conversations?agent_name=${agent_name}`);
+      const unwrapped = this._unwrapLambdaResponse(response);
+      // Return the conversations array or empty array
+      return unwrapped.conversations || unwrapped || [];
     },
     
     getConversation: async (conversationId) => {
-      return this.request(`/conversations/${conversationId}`);
+      const response = await this.request(`/conversations/${conversationId}`);
+      return this._unwrapLambdaResponse(response);
     },
     
     createConversation: async ({ agent_name, metadata }) => {
-      return this.request('/conversations', {
+      const response = await this.request('/conversations', {
         method: 'POST',
         body: JSON.stringify({ agent_name, metadata }),
       });
+      return this._unwrapLambdaResponse(response);
     },
     
     addMessage: async (conversation, message) => {
-      return this.request(`/conversations/${conversation.id}/messages`, {
+      const response = await this.request(`/conversations/${conversation.id}/messages`, {
         method: 'POST',
         body: JSON.stringify(message),
       });
+      return this._unwrapLambdaResponse(response);
     },
     
     subscribeToConversation: (conversationId, callback) => {

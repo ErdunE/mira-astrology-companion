@@ -53,7 +53,7 @@ export default function ChatSidebar({
 
         {/* Conversations list */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {conversations.map((conversation) => (
+          {(Array.isArray(conversations) ? conversations : []).map((conversation) => (
             <button
               key={conversation.id}
               onClick={() => onSelectConversation(conversation)}
