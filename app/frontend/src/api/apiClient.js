@@ -144,6 +144,101 @@ class ApiClient {
     return response;
   }
 
+  // Chat endpoints - Main chat functionality
+  chat = {
+    /**
+     * Send a message to the AI and get a response
+     * POST /chat
+     * @param {string} message - The user's message
+     * @param {string|null} conversationId - Optional conversation ID to continue existing conversation
+     * @returns {Promise<{message: string, chart_url: string, conversation_id: string}>}
+     */
+    sendMessage: async (message, conversationId = null) => {
+      const body = { message };
+      if (conversationId) {
+        body.conversation_id = conversationId;
+      }
+      
+      const response = await this.request('/chat', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      
+      return this._unwrapLambdaResponse(response);
+    },
+  };
+
+  // Conversation management endpoints
+  conversations = {
+    /**
+     * List all conversations for the current user
+     * GET /conversations
+     * @returns {Promise<{conversations: Array, has_more: boolean}>}
+     */
+    list: async () => {
+      const response = await this.request('/conversations', {
+        method: 'GET',
+      });
+      const unwrapped = this._unwrapLambdaResponse(response);
+      return unwrapped.conversations || [];
+    },
+    
+    /**
+     * Create a new conversation
+     * POST /conversations
+     * @param {string} title - Optional title for the conversation
+     * @returns {Promise<{conversation_id: string, title: string, created_at: string, message_count: number}>}
+     */
+    create: async (title = '') => {
+      const response = await this.request('/conversations', {
+        method: 'POST',
+        body: JSON.stringify({ title }),
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+    
+    /**
+     * Get messages for a specific conversation
+     * GET /conversations/{id}/messages
+     * @param {string} conversationId - The conversation ID
+     * @returns {Promise<{conversation_id: string, messages: Array, has_more: boolean}>}
+     */
+    getMessages: async (conversationId) => {
+      const response = await this.request(`/conversations/${conversationId}/messages`, {
+        method: 'GET',
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+    
+    /**
+     * Delete a conversation (soft delete)
+     * DELETE /conversations/{id}
+     * @param {string} conversationId - The conversation ID
+     * @returns {Promise<{message: string, conversation_id: string}>}
+     */
+    delete: async (conversationId) => {
+      const response = await this.request(`/conversations/${conversationId}`, {
+        method: 'DELETE',
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+    
+    /**
+     * Update conversation title
+     * PATCH /conversations/{id}
+     * @param {string} conversationId - The conversation ID
+     * @param {string} title - New title
+     * @returns {Promise<{conversation_id: string, title: string, updated_at: string}>}
+     */
+    updateTitle: async (conversationId, title) => {
+      const response = await this.request(`/conversations/${conversationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title }),
+      });
+      return this._unwrapLambdaResponse(response);
+    },
+  };
+
   // Legacy User Profile endpoints (kept for backward compatibility)
   entities = {
     UserProfile: {
@@ -174,58 +269,34 @@ class ApiClient {
     },
   };
 
-  // Agent/Chat endpoints
+  // Legacy agents endpoints (for backward compatibility with existing code)
   agents = {
-    listConversations: async ({ agent_name }) => {
-      const response = await this.request(`/conversations?agent_name=${agent_name}`);
-      const unwrapped = this._unwrapLambdaResponse(response);
-      // Return the conversations array or empty array
-      return unwrapped.conversations || unwrapped || [];
+    listConversations: async () => {
+      return this.conversations.list();
     },
     
     getConversation: async (conversationId) => {
-      const response = await this.request(`/conversations/${conversationId}`);
-      return this._unwrapLambdaResponse(response);
+      return this.conversations.getMessages(conversationId);
     },
     
-    createConversation: async ({ agent_name, metadata }) => {
-      const response = await this.request('/conversations', {
-        method: 'POST',
-        body: JSON.stringify({ agent_name, metadata }),
-      });
-      return this._unwrapLambdaResponse(response);
+    createConversation: async ({ metadata }) => {
+      const title = metadata?.name || 'New Chat';
+      return this.conversations.create(title);
     },
     
+    // This method is no longer used - we use chat.sendMessage instead
     addMessage: async (conversation, message) => {
-      const response = await this.request(`/conversations/${conversation.id}/messages`, {
-        method: 'POST',
-        body: JSON.stringify(message),
-      });
-      return this._unwrapLambdaResponse(response);
+      console.warn('agents.addMessage is deprecated. Use chat.sendMessage instead.');
+      return this.chat.sendMessage(message.content, conversation?.id || conversation?.conversation_id);
     },
     
+    // WebSocket subscription is not implemented in backend
+    // Return a no-op function for compatibility
     subscribeToConversation: (conversationId, callback) => {
-      // WebSocket or SSE connection for real-time updates
-      // This is a placeholder - implement based on your AWS backend setup
-      const wsUrl = config.api.websocketUrl || BASE_URL.replace('http', 'ws');
-      const ws = new WebSocket(`${wsUrl}/conversations/${conversationId}/subscribe`);
-      
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        callback(data);
-      };
-      
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-      
-      // Return unsubscribe function
-      return () => {
-        ws.close();
-      };
+      console.log('Real-time subscription not implemented - using polling instead');
+      return () => {}; // Return empty cleanup function
     },
   };
 }
 
 export const apiClient = new ApiClient();
-
