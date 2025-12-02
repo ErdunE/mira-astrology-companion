@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/api/apiClient';
 import { cognitoAuth } from '@/services/cognitoAuth';
 import { createPageUrl } from '../utils';
@@ -13,6 +13,8 @@ export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chartUrl, setChartUrl] = useState(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   /**
    * Check if cached profile belongs to current user and is valid
@@ -71,6 +73,44 @@ export default function Chat() {
     localStorage.setItem('profile_user_id', currentUser?.sub || '');
   };
 
+  /**
+   * Load conversations from backend
+   */
+  const loadConversations = useCallback(async () => {
+    try {
+      const convos = await apiClient.conversations.list();
+      setConversations(convos || []);
+      return convos || [];
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      setConversations([]);
+      return [];
+    }
+  }, []);
+
+  /**
+   * Load messages for a conversation
+   */
+  const loadConversationMessages = useCallback(async (conversationId) => {
+    try {
+      const result = await apiClient.conversations.getMessages(conversationId);
+      const msgs = result.messages || [];
+      setMessages(msgs);
+      
+      // Set the latest chart URL if available
+      const latestChartUrl = msgs.reduce((url, msg) => msg.chart_url || url, null);
+      if (latestChartUrl) {
+        setChartUrl(latestChartUrl);
+      }
+      
+      return msgs;
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      setMessages([]);
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     // First check if user is authenticated
     if (!cognitoAuth.isAuthenticated()) {
@@ -127,35 +167,32 @@ export default function Chat() {
         setUser(userProfile);
 
         // Load conversations
-        try {
-          const convos = await apiClient.agents.listConversations({
-            agent_name: 'mira'
-          });
-          setConversations(convos);
+        const convos = await loadConversations();
 
-          // Check for conversation ID in URL
-          const urlParams = new URLSearchParams(window.location.search);
-          const conversationId = urlParams.get('conversation');
+        // Check for conversation ID in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const conversationId = urlParams.get('conversation');
 
-          if (conversationId) {
-            const convo = await apiClient.agents.getConversation(conversationId);
+        if (conversationId) {
+          // Load specific conversation from URL
+          const msgs = await loadConversationMessages(conversationId);
+          const convo = convos.find(c => c.conversation_id === conversationId);
+          if (convo) {
             setCurrentConversation(convo);
-            setMessages(convo.messages || []);
-          } else if (convos.length > 0) {
-            // Load the most recent conversation
-            const latest = convos[0];
-            const convo = await apiClient.agents.getConversation(latest.id);
-            setCurrentConversation(convo);
-            setMessages(convo.messages || []);
+          } else {
+            // Conversation exists but not in list (might be new)
+            setCurrentConversation({ conversation_id: conversationId });
           }
-        } catch (convError) {
-          console.log('Could not load conversations:', convError);
-          setConversations([]);
+        } else if (convos.length > 0) {
+          // Load the most recent conversation
+          const latest = convos[0];
+          setCurrentConversation(latest);
+          await loadConversationMessages(latest.conversation_id);
         }
 
         setLoading(false);
       } catch (error) {
-        console.log('Backend not available - using mock data for development');
+        console.error('Failed to initialize chat:', error);
         // If backend is not ready, try to use cached/local data for development
         const cachedProfile = localStorage.getItem('user_profile');
         if (cachedProfile) {
@@ -168,78 +205,144 @@ export default function Chat() {
           setUser({ first_name: 'User', user_email: 'user@example.com' });
         }
         
-        // Check for conversation ID in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const conversationId = urlParams.get('conversation');
-        
-        if (conversationId) {
-          setCurrentConversation({ 
-            id: conversationId, 
-            agent_name: 'mira',
-            messages: []
-          });
-        }
-        
         setConversations([]);
         setLoading(false);
       }
     };
     init();
-  }, []);
+  }, [loadConversations, loadConversationMessages]);
 
-  useEffect(() => {
-    if (currentConversation) {
-      const unsubscribe = apiClient.agents.subscribeToConversation(
-        currentConversation.id,
-        (data) => {
-          setMessages(data.messages || []);
-        }
-      );
-      return () => unsubscribe();
-    }
-  }, [currentConversation]);
+  /**
+   * Handle sending a new message
+   */
+  const handleSendMessage = async (message) => {
+    if (!message.trim() || sendingMessage) return;
 
-  const handleNewChat = async () => {
+    setSendingMessage(true);
+    
+    // Optimistically add user message to UI
+    const tempUserMessage = {
+      user_message: message,
+      ai_response: null,
+      timestamp: Date.now() / 1000,
+      created_at: new Date().toISOString(),
+      _pending: true,
+    };
+    
+    setMessages(prev => [...prev, tempUserMessage]);
+
     try {
-      const newConversation = await apiClient.agents.createConversation({
-        agent_name: 'mira',
-        metadata: { name: 'New Chat' }
-      });
+      const conversationId = currentConversation?.conversation_id || null;
+      const result = await apiClient.chat.sendMessage(message, conversationId);
       
-      const convos = await apiClient.agents.listConversations({
-        agent_name: 'mira'
-      });
-      setConversations(convos);
-      setCurrentConversation(newConversation);
-      setMessages([]);
+      console.log('Chat response:', result);
       
-      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + newConversation.id);
-    } catch (error) {
-      console.log('Backend not available - creating mock conversation');
-      // Create mock conversation for development
-      const mockConversation = {
-        id: 'dev-conversation-' + Date.now(),
-        agent_name: 'mira',
-        metadata: { name: 'New Chat' },
-        messages: []
+      // Update the message with AI response
+      const newMessage = {
+        user_message: message,
+        ai_response: result.message,
+        chart_url: result.chart_url,
+        timestamp: Date.now() / 1000,
+        created_at: new Date().toISOString(),
       };
-      setCurrentConversation(mockConversation);
-      setMessages([]);
-      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + mockConversation.id);
+      
+      // Replace the pending message with the complete one
+      setMessages(prev => {
+        const filtered = prev.filter(m => !m._pending);
+        return [...filtered, newMessage];
+      });
+      
+      // Update chart URL if provided
+      if (result.chart_url) {
+        setChartUrl(result.chart_url);
+      }
+      
+      // Update conversation if this was a new one
+      if (result.conversation_id && !conversationId) {
+        const newConvo = {
+          conversation_id: result.conversation_id,
+          title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          message_count: 1,
+        };
+        setCurrentConversation(newConvo);
+        
+        // Refresh conversations list
+        await loadConversations();
+        
+        // Update URL
+        window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + result.conversation_id);
+      } else if (conversationId) {
+        // Refresh the current conversation
+        setCurrentConversation(prev => ({
+          ...prev,
+          message_count: (prev?.message_count || 0) + 1,
+          updated_at: new Date().toISOString(),
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove the pending message on error
+      setMessages(prev => prev.filter(m => !m._pending));
+      
+      // Show error to user
+      alert('Failed to send message. Please try again.\n\nError: ' + (error.message || 'Unknown error'));
+    } finally {
+      setSendingMessage(false);
     }
   };
 
+  const handleNewChat = async () => {
+    // Clear current conversation and messages
+    setCurrentConversation(null);
+    setMessages([]);
+    setChartUrl(null);
+    
+    // Clear URL
+    window.history.pushState({}, '', createPageUrl('Chat'));
+  };
+
   const handleSelectConversation = async (conversation) => {
+    if (conversation.conversation_id === currentConversation?.conversation_id) {
+      return; // Already selected
+    }
+    
+    setCurrentConversation(conversation);
+    setMessages([]);
+    setChartUrl(null);
+    
+    // Load messages for selected conversation
+    await loadConversationMessages(conversation.conversation_id);
+    
+    // Update URL
+    window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + conversation.conversation_id);
+  };
+
+  const handleDeleteConversation = async (conversationId) => {
     try {
-      const convo = await apiClient.agents.getConversation(conversation.id);
-      setCurrentConversation(convo);
-      setMessages(convo.messages || []);
-      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + conversation.id);
+      await apiClient.conversations.delete(conversationId);
+      
+      // Refresh conversations list
+      const convos = await loadConversations();
+      
+      // If we deleted the current conversation, clear it
+      if (currentConversation?.conversation_id === conversationId) {
+        if (convos.length > 0) {
+          setCurrentConversation(convos[0]);
+          await loadConversationMessages(convos[0].conversation_id);
+          window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + convos[0].conversation_id);
+        } else {
+          setCurrentConversation(null);
+          setMessages([]);
+          setChartUrl(null);
+          window.history.pushState({}, '', createPageUrl('Chat'));
+        }
+      }
     } catch (error) {
-      console.log('Backend not available');
-      setCurrentConversation(conversation);
-      setMessages([]);
-      window.history.pushState({}, '', createPageUrl('Chat') + '?conversation=' + conversation.id);
+      console.error('Failed to delete conversation:', error);
+      alert('Failed to delete conversation. Please try again.');
     }
   };
 
@@ -259,6 +362,7 @@ export default function Chat() {
         currentConversation={currentConversation}
         onSelectConversation={handleSelectConversation}
         onNewChat={handleNewChat}
+        onDeleteConversation={handleDeleteConversation}
         user={user}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -270,11 +374,13 @@ export default function Chat() {
           conversation={currentConversation}
           messages={messages}
           onNewChat={handleNewChat}
+          onSendMessage={handleSendMessage}
+          isLoading={sendingMessage}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
 
         {/* Visualization area */}
-        <VisualizationArea />
+        <VisualizationArea chartUrl={chartUrl} />
       </div>
     </div>
   );
