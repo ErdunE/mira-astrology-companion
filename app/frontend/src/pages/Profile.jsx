@@ -1,39 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '@/api/apiClient';
+import { cognitoAuth } from '@/services/cognitoAuth';
 import { createPageUrl } from '../utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Moon, Sparkles } from 'lucide-react';
 import ProfileForm from '../components/onboarding/ProfileForm';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Cache user profile with user ID
+   */
+  const cacheUserProfile = (profileData) => {
+    const currentUser = cognitoAuth.getCurrentUser();
+    localStorage.setItem('user_profile', JSON.stringify(profileData));
+    localStorage.setItem('profile_check_time', Date.now().toString());
+    localStorage.setItem('profile_user_id', currentUser?.sub || '');
+  };
+  
+  /**
+   * Check if cached profile belongs to current user
+   */
+  const getValidCachedProfile = () => {
+    try {
+      const cachedProfile = localStorage.getItem('user_profile');
+      const cachedUserId = localStorage.getItem('profile_user_id');
+      const currentUser = cognitoAuth.getCurrentUser();
+      
+      if (!cachedProfile) return null;
+      
+      // Check if cache belongs to current user
+      if (cachedUserId && currentUser?.sub && cachedUserId !== currentUser.sub) {
+        console.log('🔄 Cache belongs to different user');
+        return null;
+      }
+      
+      return JSON.parse(cachedProfile);
+    } catch (e) {
+      return null;
+    }
+  };
+
   useEffect(() => {
+    // First check if user is authenticated
+    if (!cognitoAuth.isAuthenticated()) {
+      console.warn('User not authenticated, redirecting to login');
+      window.location.href = '/';
+      return;
+    }
+
     const init = async () => {
+      // Get user info from Cognito tokens
+      const currentUser = cognitoAuth.getCurrentUser();
+      setUser(currentUser || { email: 'user@example.com' });
+
       try {
-        const currentUser = await apiClient.auth.me();
-        setUser(currentUser);
-
-        const profiles = await apiClient.entities.UserProfile.filter({
-          user_email: currentUser.email
-        });
-
-        if (profiles.length > 0) {
-          setProfile(profiles[0]);
+        // Try to get profile from API
+        console.log('🔍 Fetching profile from API...');
+        const existingProfile = await apiClient.profile.get();
+        
+        if (existingProfile && existingProfile.birth_date) {
+          // Transform backend format to form format
+          setProfile({
+            birth_date: existingProfile.birth_date,
+            birth_time: existingProfile.birth_time,
+            birth_city: existingProfile.birth_location?.split(',')[0]?.trim() || '',
+            birth_country: existingProfile.birth_country,
+            zodiac_sign: existingProfile.zodiac_sign
+          });
+          
+          // Cache the profile with user ID
+          cacheUserProfile(existingProfile);
+          console.log('✅ Profile loaded and cached');
         }
       } catch (error) {
-        console.log('Backend not available - using local profile data');
-        // If backend is not ready, use local data for development
-        const devProfile = localStorage.getItem('dev_profile');
-        if (devProfile) {
-          const profileData = JSON.parse(devProfile);
-          setUser({ email: profileData.user_email });
-          setProfile(profileData);
+        // If 404, no profile exists yet - that's fine
+        if (error.status === 404) {
+          console.log('📝 No profile found - user can create one');
         } else {
-          setUser({ email: 'user@example.com' });
+          // 500 or other errors - try to use cached data if valid
+          console.warn('⚠️ Could not fetch profile:', error);
+          const cachedProfile = getValidCachedProfile();
+          if (cachedProfile) {
+            setProfile({
+              birth_date: cachedProfile.birth_date,
+              birth_time: cachedProfile.birth_time,
+              birth_city: cachedProfile.birth_location?.split(',')[0]?.trim() || '',
+              birth_country: cachedProfile.birth_country,
+              zodiac_sign: cachedProfile.zodiac_sign
+            });
+            console.log('📦 Using cached profile data');
+          }
         }
       } finally {
         setLoading(false);
@@ -44,25 +106,52 @@ export default function Profile() {
 
   const handleSubmit = async (profileData) => {
     try {
+      let savedProfile;
+      
       if (profile) {
-        await apiClient.entities.UserProfile.update(profile.id, profileData);
+        // Update existing profile
+        const response = await apiClient.profile.update(profileData);
+        savedProfile = response.profile || response;
+        toast.success('Profile updated successfully!');
       } else {
-        await apiClient.entities.UserProfile.create({
-          ...profileData,
-          user_email: user.email
+        // Create new profile
+        const response = await apiClient.profile.create(profileData);
+        savedProfile = response.profile;
+        toast.success('🎉 Profile created successfully!', {
+          description: `Zodiac sign: ${savedProfile?.zodiac_sign || 'Unknown'}`,
         });
       }
-      window.location.href = createPageUrl('Chat');
+      
+      // Cache the updated profile
+      if (savedProfile) {
+        cacheUserProfile(savedProfile);
+      }
+      
+      // Redirect to chat
+      setTimeout(() => {
+        window.location.href = createPageUrl('Chat');
+      }, 1500);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      console.log('Backend not available - saving profile locally');
-      // If backend is not ready, save locally for development
-      localStorage.setItem('dev_profile', JSON.stringify({
-        ...profileData,
-        user_email: user.email
-      }));
-      alert('Profile saved locally!\n\nBackend not connected yet.\nConnect your AWS backend to save permanently.');
-      window.location.href = createPageUrl('Chat');
+      console.error('Error saving profile:', error);
+      
+      // Parse error response
+      let errorMessage = 'Failed to save profile. Please try again.';
+      try {
+        if (error.message) {
+          const errorData = JSON.parse(error.message);
+          if (errorData.error) {
+            errorMessage = errorData.error.message || errorMessage;
+          }
+        }
+      } catch (parseError) {
+        // Use default error message
+      }
+
+      toast.error('Failed to save profile', {
+        description: errorMessage,
+      });
+
+      throw error;
     }
   };
 

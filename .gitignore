@@ -77,3 +77,9 @@ response.json
 token.txt
 *.pem
 EOF
+
+### Slides ###
+*.key
+*.pptx
+*.pdf
+*.keynote
