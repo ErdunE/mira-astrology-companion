@@ -309,6 +309,39 @@ jobs:
             echo "s3_bucket=mira-dev-frontend-us-east-1" >> $GITHUB_OUTPUT
           fi
 
+      # 4.1. Get CloudFront Distribution ID
+      - name: Get CloudFront Distribution ID
+        id: cloudfront
+        run: |
+          S3_BUCKET="${{ steps.env.outputs.s3_bucket }}"
+          
+          echo "Looking for CloudFront distribution with S3 origin: ${S3_BUCKET}"
+          
+          # Get all CloudFront distributions and find the one with our S3 bucket as origin
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Origins.Items[?contains(DomainName, '${S3_BUCKET}')]].Id | [0]" \
+            --output text \
+            --region ${{ secrets.AWS_REGION }})
+          
+          if [[ -z "$DISTRIBUTION_ID" ]] || [[ "$DISTRIBUTION_ID" == "None" ]]; then
+            echo "⚠️ No CloudFront distribution found for bucket: ${S3_BUCKET}"
+            echo "distribution_id=" >> $GITHUB_OUTPUT
+            echo "cloudfront_url=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Found CloudFront distribution: ${DISTRIBUTION_ID}"
+            echo "distribution_id=${DISTRIBUTION_ID}" >> $GITHUB_OUTPUT
+            
+            # Get the CloudFront domain name
+            DOMAIN_NAME=$(aws cloudfront get-distribution \
+              --id "${DISTRIBUTION_ID}" \
+              --query "Distribution.DomainName" \
+              --output text \
+              --region ${{ secrets.AWS_REGION }})
+            
+            echo "cloudfront_url=https://${DOMAIN_NAME}" >> $GITHUB_OUTPUT
+            echo "CloudFront URL: https://${DOMAIN_NAME}"
+          fi
+
       # 5. Install Dependencies
       - name: Install dependencies
         run: |
@@ -370,7 +403,27 @@ jobs:
           FILE_COUNT=$(aws s3 ls s3://${{ steps.env.outputs.s3_bucket }}/ --recursive --region ${{ secrets.AWS_REGION }} | wc -l)
           echo "✅ Total files in S3: ${FILE_COUNT}"
 
-      # 9. Show Frontend Deployment Info
+      # 9. Invalidate CloudFront Cache
+      - name: Invalidate CloudFront cache
+        if: steps.cloudfront.outputs.distribution_id != ''
+        run: |
+          DISTRIBUTION_ID="${{ steps.cloudfront.outputs.distribution_id }}"
+          
+          echo "Invalidating CloudFront cache for distribution: ${DISTRIBUTION_ID}"
+          
+          # Create invalidation for all files
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --paths "/*" \
+            --query "Invalidation.Id" \
+            --output text \
+            --region ${{ secrets.AWS_REGION }})
+          
+          echo "✅ CloudFront invalidation created: ${INVALIDATION_ID}"
+          echo ""
+          echo "Note: Invalidation typically takes 1-2 minutes to complete globally."
+
+      # 10. Show Frontend Deployment Info
       - name: Show frontend deployment information
         run: |
           echo ""
@@ -383,8 +436,15 @@ jobs:
           echo "Region: ${{ secrets.AWS_REGION }}"
           echo ""
           echo "Access URLs:"
-          echo "  S3 Website: http://${{ steps.env.outputs.s3_bucket }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
+          if [[ -n "${{ steps.cloudfront.outputs.cloudfront_url }}" ]]; then
+            echo "  🌐 CloudFront (Primary): ${{ steps.cloudfront.outputs.cloudfront_url }}"
+          fi
+          echo "  📦 S3 Website: http://${{ steps.env.outputs.s3_bucket }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
           echo ""
+          if [[ -n "${{ steps.cloudfront.outputs.distribution_id }}" ]]; then
+            echo "CloudFront Distribution ID: ${{ steps.cloudfront.outputs.distribution_id }}"
+            echo ""
+          fi
           echo "Deployed by: ${{ github.actor }}"
           echo "Commit: ${{ github.sha }}"
           echo ""
