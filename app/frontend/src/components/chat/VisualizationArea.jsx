@@ -63,22 +63,28 @@ export default function VisualizationArea({ chartUrl }) {
           onClick={() => setIsExpanded(false)}
         >
           <div 
-            className="relative max-w-4xl max-h-full"
+            className="relative bg-white rounded-lg shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <Button
               variant="ghost"
               size="icon"
-              className="absolute -top-12 right-0 text-white hover:bg-white/10"
+              className="absolute -top-12 right-0 text-white hover:bg-white/10 z-10"
               onClick={() => setIsExpanded(false)}
             >
               <Minimize2 className="w-5 h-5" />
             </Button>
-            <img
-              src={chartUrl}
-              alt="Astrology Birth Chart"
-              className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
-            />
+            <object
+              data={chartUrl}
+              type="image/svg+xml"
+              className="w-[80vw] h-[75vh] max-w-4xl"
+            >
+              <img
+                src={chartUrl}
+                alt="Astrology Birth Chart"
+                className="w-full h-full object-contain"
+              />
+            </object>
           </div>
         </div>
       )}
