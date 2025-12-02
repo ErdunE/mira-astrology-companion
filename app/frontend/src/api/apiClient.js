@@ -115,10 +115,10 @@ class ApiClient {
       return unwrapped.profile || unwrapped;
     },
     
-    // Update user profile (PUT /profile)
+    // Update user profile (POST /profile - backend uses put_item which replaces/upserts)
     update: async (data) => {
       const response = await this.request('/profile', {
-        method: 'PUT',
+        method: 'POST',
         body: JSON.stringify(data),
       });
       return this._unwrapLambdaResponse(response);
