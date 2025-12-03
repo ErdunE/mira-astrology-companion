@@ -14,16 +14,99 @@ class UserProfileInput(BaseModel):
     User profile input data model with validation.
 
     Validates:
+    - First name and last name (required, reasonable length)
     - Birth date (valid format, not in future, reasonable range)
     - Birth time (valid 24-hour format)
     - Birth location (not empty, reasonable length)
     - Birth country (not empty, reasonable length)
     """
 
+    first_name: str = Field(..., description="User's first name")
+    last_name: str = Field(..., description="User's last name")
     birth_date: str = Field(..., description="Birth date in YYYY-MM-DD format")
     birth_time: str = Field(..., description="Birth time in HH:MM format (24-hour)")
-    birth_location: str = Field(..., description="Birth location (city, state/province)")
-    birth_country: str = Field(..., description="Birth country (e.g., United States, China)")
+    birth_location: str = Field(
+        ..., description="Birth location (city, state/province)"
+    )
+    birth_country: str = Field(
+        ..., description="Birth country (e.g., United States, China)"
+    )
+
+    @field_validator("first_name")
+    @classmethod
+    def validate_first_name(cls, v: str) -> str:
+        """
+        Validate first name.
+
+        Rules:
+        - Cannot be empty or only whitespace
+        - Must be between 1 and 50 characters
+        - Can contain letters, spaces, hyphens, apostrophes
+
+        Args:
+            v: First name to validate
+
+        Returns:
+            Validated and trimmed first name
+
+        Raises:
+            ValueError: If name is invalid
+        """
+        trimmed = v.strip()
+
+        if not trimmed:
+            raise ValueError("First name cannot be empty")
+
+        if len(trimmed) > 50:
+            raise ValueError("First name must be at most 50 characters")
+
+        # Allow letters, spaces, hyphens, apostrophes (e.g., "Mary-Jane", "O'Brien")
+        import re
+
+        if not re.match(r"^[a-zA-Z\s\-']+$", trimmed):
+            raise ValueError(
+                "First name can only contain letters, spaces, hyphens, and apostrophes"
+            )
+
+        return trimmed
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, v: str) -> str:
+        """
+        Validate last name.
+
+        Rules:
+        - Cannot be empty or only whitespace
+        - Must be between 1 and 50 characters
+        - Can contain letters, spaces, hyphens, apostrophes
+
+        Args:
+            v: Last name to validate
+
+        Returns:
+            Validated and trimmed last name
+
+        Raises:
+            ValueError: If name is invalid
+        """
+        trimmed = v.strip()
+
+        if not trimmed:
+            raise ValueError("Last name cannot be empty")
+
+        if len(trimmed) > 50:
+            raise ValueError("Last name must be at most 50 characters")
+
+        # Allow letters, spaces, hyphens, apostrophes
+        import re
+
+        if not re.match(r"^[a-zA-Z\s\-']+$", trimmed):
+            raise ValueError(
+                "Last name can only contain letters, spaces, hyphens, and apostrophes"
+            )
+
+        return trimmed
 
     @field_validator("birth_date")
     @classmethod
@@ -50,7 +133,9 @@ class UserProfileInput(BaseModel):
         try:
             parsed_date = datetime.strptime(v, "%Y-%m-%d").date()
         except ValueError:
-            raise ValueError("Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)")
+            raise ValueError(
+                "Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)"
+            )
 
         # Check not in future
         if parsed_date > date.today():
@@ -202,6 +287,8 @@ def validate_user_profile(data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Return validated data as dict
         return {
+            "first_name": profile.first_name,
+            "last_name": profile.last_name,
             "birth_date": profile.birth_date,
             "birth_time": profile.birth_time,
             "birth_location": profile.birth_location,

@@ -73,7 +73,9 @@ def generate_conversation_title(first_message: str, bedrock_client=None) -> str:
 
             # Clean up reasoning tags (Bedrock sometimes includes these)
             # Strategy: Remove <reasoning>...</reasoning> blocks, but keep text after
-            ai_title = re.sub(r"<reasoning>.*?</reasoning>\s*", "", ai_title, flags=re.DOTALL)
+            ai_title = re.sub(
+                r"<reasoning>.*?</reasoning>\s*", "", ai_title, flags=re.DOTALL
+            )
             # Remove any orphaned opening tag
             ai_title = re.sub(r"^.*?<reasoning>\s*", "", ai_title)
             # Remove any orphaned closing tag and everything before it
@@ -86,7 +88,9 @@ def generate_conversation_title(first_message: str, bedrock_client=None) -> str:
                 logger.info(f"AI-generated title: {title}")
                 return title
             else:
-                logger.warning("AI title empty or too long after cleaning, using fallback")
+                logger.warning(
+                    "AI title empty or too long after cleaning, using fallback"
+                )
 
         except Exception as e:
             logger.warning(f"Failed to generate AI title: {e}")

@@ -21,6 +21,8 @@ const countries = [
 
 export default function ProfileForm({ onSubmit, user, initialData = null }) {
   const [formData, setFormData] = useState({
+    first_name: initialData?.first_name || '',
+    last_name: initialData?.last_name || '',
     birth_date: initialData?.birth_date ? new Date(initialData.birth_date) : null,
     birth_time: initialData?.birth_time || '',
     birth_country: initialData?.birth_country || '',
@@ -33,6 +35,20 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
   // Validation functions
   const validateForm = () => {
     const newErrors = {};
+
+    // Validate first name
+    if (!formData.first_name || formData.first_name.trim().length === 0) {
+      newErrors.first_name = 'First name is required';
+    } else if (formData.first_name.trim().length < 2) {
+      newErrors.first_name = 'First name must be at least 2 characters';
+    }
+
+    // Validate last name
+    if (!formData.last_name || formData.last_name.trim().length === 0) {
+      newErrors.last_name = 'Last name is required';
+    } else if (formData.last_name.trim().length < 2) {
+      newErrors.last_name = 'Last name must be at least 2 characters';
+    }
 
     // Validate birth date
     if (!formData.birth_date) {
@@ -84,6 +100,8 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
     
     // Mark all fields as touched
     setTouched({
+      first_name: true,
+      last_name: true,
       birth_date: true,
       birth_time: true,
       birth_city: true,
@@ -100,6 +118,8 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
     try {
       // Prepare data for backend (all fields are required by backend validator)
       const profileData = {
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
         birth_date: format(formData.birth_date, 'yyyy-MM-dd'),
         birth_time: formData.birth_time.trim(), // Required by backend
         birth_location: `${formData.birth_city.trim()}, ${formData.birth_country}`,
@@ -137,6 +157,74 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
       
       <CardContent className="px-6 md:px-8 py-6 md:py-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* First Name */}
+          <div className="space-y-2">
+            <Label htmlFor="first_name" className="text-foreground font-medium flex items-center gap-2 text-sm">
+              First Name
+              <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="first_name"
+              type="text"
+              value={formData.first_name}
+              onChange={(e) => {
+                setFormData({ ...formData, first_name: e.target.value });
+                setTouched({ ...touched, first_name: true });
+              }}
+              onBlur={() => handleBlur('first_name')}
+              className={`h-11 ${inputBaseStyles} ${
+                touched.first_name && errors.first_name ? inputErrorStyles : ''
+              }`}
+              placeholder="e.g., John"
+              required
+            />
+            {touched.first_name && errors.first_name && (
+              <motion.p 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-destructive text-sm flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                {errors.first_name}
+              </motion.p>
+            )}
+          </div>
+
+          {/* Last Name */}
+          <div className="space-y-2">
+            <Label htmlFor="last_name" className="text-foreground font-medium flex items-center gap-2 text-sm">
+              Last Name
+              <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="last_name"
+              type="text"
+              value={formData.last_name}
+              onChange={(e) => {
+                setFormData({ ...formData, last_name: e.target.value });
+                setTouched({ ...touched, last_name: true });
+              }}
+              onBlur={() => handleBlur('last_name')}
+              className={`h-11 ${inputBaseStyles} ${
+                touched.last_name && errors.last_name ? inputErrorStyles : ''
+              }`}
+              placeholder="e.g., Doe"
+              required
+            />
+            {touched.last_name && errors.last_name && (
+              <motion.p 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-destructive text-sm flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                {errors.last_name}
+              </motion.p>
+            )}
+          </div>
+
+          <CelestialDivider className="py-2" />
+
           {/* Birth date */}
           <div className="space-y-2">
             <Label className="text-foreground font-medium flex items-center gap-2 text-sm">

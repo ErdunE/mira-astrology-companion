@@ -108,7 +108,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # Extract HTTP method
     http_method = event.get("httpMethod", "")
     if not http_method and "raw_event" in event:
-        http_method = event["raw_event"].get("requestContext", {}).get("http", {}).get("method", "")
+        http_method = (
+            event["raw_event"]
+            .get("requestContext", {})
+            .get("http", {})
+            .get("method", "")
+        )
 
     logger.info(f"Profile request - Method: {http_method}")
 
@@ -118,7 +123,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     elif http_method == "POST":
         return create_profile(event, context)
     else:
-        return {"statusCode": 405, "body": json.dumps({"error": "Method not allowed. Use GET or POST."})}
+        return {
+            "statusCode": 405,
+            "body": json.dumps({"error": "Method not allowed. Use GET or POST."}),
+        }
 
 
 def create_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -205,6 +213,8 @@ def create_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     profile_item = {
         "user_id": user_id,
+        "first_name": validated_data["first_name"],
+        "last_name": validated_data["last_name"],
         "birth_date": validated_data["birth_date"],
         "birth_time": validated_data["birth_time"],
         "birth_location": validated_data["birth_location"],
@@ -212,16 +222,11 @@ def create_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         "zodiac_sign": zodiac_sign,
         "created_at": current_timestamp,
         "updated_at": current_timestamp,
-        "chart_generated": False,
-        "last_chart_generated_at": None,
     }
 
     # Add email if available
     if email:
         profile_item["email"] = email
-
-    # Add timezone placeholder (will be calculated by Astrology API later)
-    profile_item["timezone"] = None
 
     # Save to DynamoDB
     try:
@@ -269,6 +274,8 @@ def create_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # Remove sensitive/internal fields from response
     response_profile = {
         "user_id": profile_item["user_id"],
+        "first_name": profile_item["first_name"],
+        "last_name": profile_item["last_name"],
         "birth_date": profile_item["birth_date"],
         "birth_time": profile_item["birth_time"],
         "birth_location": profile_item["birth_location"],
@@ -282,7 +289,9 @@ def create_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"message": "Profile created successfully", "profile": response_profile}),
+        "body": json.dumps(
+            {"message": "Profile created successfully", "profile": response_profile}
+        ),
     }
 
 
@@ -317,7 +326,10 @@ def get_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         user_id = extract_user_id_from_event(event)
     except ValueError as e:
-        return {"statusCode": 401, "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}})}
+        return {
+            "statusCode": 401,
+            "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}}),
+        }
 
     # Query DynamoDB
     try:
@@ -345,6 +357,8 @@ def get_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Format response (remove internal fields)
         response_profile = {
             "user_id": profile["user_id"],
+            "first_name": profile.get("first_name", ""),
+            "last_name": profile.get("last_name", ""),
             "birth_date": profile.get("birth_date", ""),
             "birth_time": profile.get("birth_time", ""),
             "birth_location": profile.get("birth_location", ""),
@@ -385,7 +399,14 @@ def get_profile(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": {"code": "INTERNAL_ERROR", "message": "An unexpected error occurred"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred",
+                    }
+                }
+            ),
         }
 
 
@@ -413,7 +434,11 @@ if __name__ == "__main__":
                 "birth_country": "United States",
             }
         ),
-        "requestContext": {"authorizer": {"claims": {"sub": "test-user-12345", "email": "test@example.com"}}},
+        "requestContext": {
+            "authorizer": {
+                "claims": {"sub": "test-user-12345", "email": "test@example.com"}
+            }
+        },
     }
 
     result = lambda_handler(test_event, MockContext())
