@@ -132,9 +132,7 @@ class AstrologyClient:
         Raises:
             AstrologyAPIError: If API call fails after retries
         """
-        logger.info(
-            f"Generating birth chart for user profile: {user_profile.get('birth_location')}"
-        )
+        logger.info(f"Generating birth chart for user profile: {user_profile.get('birth_location')}")
 
         # Build request payload
         try:
@@ -142,16 +140,12 @@ class AstrologyClient:
             logger.info(f"Request payload built: {json.dumps(payload, default=str)}")
         except Exception as e:
             logger.error(f"Failed to build request payload: {e}")
-            raise AstrologyAPIError(
-                message="Invalid user profile data", original_error=str(e)
-            )
+            raise AstrologyAPIError(message="Invalid user profile data", original_error=str(e))
 
         # Make API call with retry logic
         for attempt in range(MAX_RETRIES):
             try:
-                logger.info(
-                    f"Attempt {attempt + 1}/{MAX_RETRIES} to call Astrologer API"
-                )
+                logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} to call Astrologer API")
 
                 response = self._make_api_request(payload, timeout=REQUEST_TIMEOUT)
 
@@ -234,9 +228,7 @@ class AstrologyClient:
         if self.geonames_username:
             subject["geonames_username"] = self.geonames_username
         else:
-            logger.warning(
-                "Geonames username not configured, API may require manual coordinates"
-            )
+            logger.warning("Geonames username not configured, API may require manual coordinates")
 
         return {"subject": subject, "theme": "dark"}
 
@@ -279,9 +271,7 @@ class AstrologyClient:
             logger.error(f"Could not find country code for: {country_name}")
             raise ValueError(f"Unknown country: {country_name}")
 
-    def _make_api_request(
-        self, payload: Dict[str, Any], timeout: int
-    ) -> Dict[str, Any]:
+    def _make_api_request(self, payload: Dict[str, Any], timeout: int) -> Dict[str, Any]:
         """
         Make HTTP request to Astrologer API.
 

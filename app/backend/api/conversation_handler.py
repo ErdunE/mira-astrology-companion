@@ -32,9 +32,7 @@ logger.setLevel(logging.INFO)
 
 # DynamoDB setup
 dynamodb = boto3.resource("dynamodb")
-CONVERSATIONS_TABLE = os.environ.get(
-    "DYNAMODB_CONVERSATIONS_TABLE", "mira-conversations-dev"
-)
+CONVERSATIONS_TABLE = os.environ.get("DYNAMODB_CONVERSATIONS_TABLE", "mira-conversations-dev")
 
 # Pagination limits
 DEFAULT_CONVERSATION_LIMIT = 20
@@ -101,9 +99,7 @@ def create_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     title = custom_title if custom_title else "New Conversation"
 
     # Build metadata item
-    metadata_item = build_conversation_metadata_item(
-        user_id=user_id, conversation_id=conversation_id, title=title
-    )
+    metadata_item = build_conversation_metadata_item(user_id=user_id, conversation_id=conversation_id, title=title)
 
     # Save to DynamoDB
     table = dynamodb.Table(CONVERSATIONS_TABLE)
@@ -196,9 +192,7 @@ def list_conversations(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         response = table.query(**query_kwargs)
 
         # Format conversations for response
-        conversations = [
-            format_conversation_for_response(item) for item in response.get("Items", [])
-        ]
+        conversations = [format_conversation_for_response(item) for item in response.get("Items", [])]
 
         # Sort by updated_at (most recent first)
         conversations.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
@@ -216,9 +210,7 @@ def list_conversations(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if "LastEvaluatedKey" in response:
             import base64
 
-            token = base64.b64encode(
-                json.dumps(response["LastEvaluatedKey"]).encode("utf-8")
-            ).decode("utf-8")
+            token = base64.b64encode(json.dumps(response["LastEvaluatedKey"]).encode("utf-8")).decode("utf-8")
             result["next_token"] = token
 
         logger.info(f"Listed {len(conversations)} conversations for user: {user_id}")
@@ -281,9 +273,7 @@ def get_conversation_messages(event: Dict[str, Any], context: Any) -> Dict[str, 
 
     try:
         # Get conversation metadata to verify ownership
-        metadata_response = table.get_item(
-            Key={"user_id": user_id, "sk": f"CONV#{conversation_id}"}
-        )
+        metadata_response = table.get_item(Key={"user_id": user_id, "sk": f"CONV#{conversation_id}"})
 
         if "Item" not in metadata_response:
             raise ValueError(f"Conversation not found: {conversation_id}")
@@ -317,9 +307,7 @@ def get_conversation_messages(event: Dict[str, Any], context: Any) -> Dict[str, 
         response = table.query(**query_kwargs)
 
         # Format messages
-        messages = [
-            format_message_for_response(item) for item in response.get("Items", [])
-        ]
+        messages = [format_message_for_response(item) for item in response.get("Items", [])]
 
         # Build response
         result = {
@@ -332,14 +320,10 @@ def get_conversation_messages(event: Dict[str, Any], context: Any) -> Dict[str, 
         if "LastEvaluatedKey" in response:
             import base64
 
-            token = base64.b64encode(
-                json.dumps(response["LastEvaluatedKey"]).encode("utf-8")
-            ).decode("utf-8")
+            token = base64.b64encode(json.dumps(response["LastEvaluatedKey"]).encode("utf-8")).decode("utf-8")
             result["next_token"] = token
 
-        logger.info(
-            f"Retrieved {len(messages)} messages for conversation: {conversation_id}"
-        )
+        logger.info(f"Retrieved {len(messages)} messages for conversation: {conversation_id}")
         return result
 
     except ValueError as e:
@@ -406,9 +390,7 @@ def delete_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning(f"Conversation not found: {conversation_id}")
             return {
                 "statusCode": 404,
-                "body": json.dumps(
-                    {"error": f"Conversation not found: {conversation_id}"}
-                ),
+                "body": json.dumps({"error": f"Conversation not found: {conversation_id}"}),
             }
 
         logger.error(f"Failed to delete conversation: {e}")
@@ -488,9 +470,7 @@ def update_conversation(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning(f"Conversation not found or deleted: {conversation_id}")
             return {
                 "statusCode": 404,
-                "body": json.dumps(
-                    {"error": "Conversation not found or has been deleted"}
-                ),
+                "body": json.dumps({"error": "Conversation not found or has been deleted"}),
             }
 
         logger.error(f"Failed to update conversation: {e}")

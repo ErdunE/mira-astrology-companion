@@ -25,12 +25,8 @@ class UserProfileInput(BaseModel):
     last_name: str = Field(..., description="User's last name")
     birth_date: str = Field(..., description="Birth date in YYYY-MM-DD format")
     birth_time: str = Field(..., description="Birth time in HH:MM format (24-hour)")
-    birth_location: str = Field(
-        ..., description="Birth location (city, state/province)"
-    )
-    birth_country: str = Field(
-        ..., description="Birth country (e.g., United States, China)"
-    )
+    birth_location: str = Field(..., description="Birth location (city, state/province)")
+    birth_country: str = Field(..., description="Birth country (e.g., United States, China)")
 
     @field_validator("first_name")
     @classmethod
@@ -64,9 +60,7 @@ class UserProfileInput(BaseModel):
         import re
 
         if not re.match(r"^[a-zA-Z\s\-']+$", trimmed):
-            raise ValueError(
-                "First name can only contain letters, spaces, hyphens, and apostrophes"
-            )
+            raise ValueError("First name can only contain letters, spaces, hyphens, and apostrophes")
 
         return trimmed
 
@@ -102,9 +96,7 @@ class UserProfileInput(BaseModel):
         import re
 
         if not re.match(r"^[a-zA-Z\s\-']+$", trimmed):
-            raise ValueError(
-                "Last name can only contain letters, spaces, hyphens, and apostrophes"
-            )
+            raise ValueError("Last name can only contain letters, spaces, hyphens, and apostrophes")
 
         return trimmed
 
@@ -133,9 +125,7 @@ class UserProfileInput(BaseModel):
         try:
             parsed_date = datetime.strptime(v, "%Y-%m-%d").date()
         except ValueError:
-            raise ValueError(
-                "Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)"
-            )
+            raise ValueError("Invalid date format. Expected: YYYY-MM-DD (e.g., 1990-01-15)")
 
         # Check not in future
         if parsed_date > date.today():

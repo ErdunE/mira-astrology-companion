@@ -210,11 +210,7 @@ if __name__ == "__main__":
     print("\n[Test 5] Missing sub claim in JWT")
     print("-" * 60)
 
-    missing_sub_event = {
-        "requestContext": {
-            "authorizer": {"jwt": {"claims": {"email": "test@example.com"}}}
-        }
-    }
+    missing_sub_event = {"requestContext": {"authorizer": {"jwt": {"claims": {"email": "test@example.com"}}}}}
 
     try:
         extract_user_from_event(missing_sub_event)
