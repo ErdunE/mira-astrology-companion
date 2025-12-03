@@ -32,7 +32,7 @@ Our architecture is documented visually using a Miro diagram that captures the f
   [Mira Architecture – Miro Board](https://miro.com/app/board/uXjVJsOlhH8=/?share_link_id=259343820262)
 
 - **PDF architecture diagram:**  
-  [Architecture Diagram (PDF)](../architecture/CS6620%20FCC%20Final%20Project%20Architecture%20Diagram.pdf)
+  [Architecture Diagram (PDF)](architecture/CS6620%20FCC%20Final%20Project%20Architecture%20Diagram.pdf)
 
 At a high level, the diagram shows a user accessing the Mira web application via a CloudFront distribution backed by an S3 static website bucket. After authentication with Amazon Cognito, the React SPA sends authenticated requests through an API Gateway HTTP API, which invokes a single consolidated AWS Lambda function for API logic. That Lambda runs inside a custom VPC and interacts with DynamoDB tables for user state and conversations, an S3 artifacts bucket for chart images, AWS Bedrock via a VPC interface endpoint for LLM-generated guidance, and an external Astrologer API with credentials stored in AWS Secrets Manager. Supporting components like VPC endpoints, CloudWatch logs, and alarms are also shown so that the diagram matches the deployed system.
 
