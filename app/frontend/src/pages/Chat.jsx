@@ -346,6 +346,30 @@ export default function Chat() {
     }
   };
 
+  const handleUpdateConversationTitle = async (conversationId, newTitle) => {
+    try {
+      await apiClient.conversations.updateTitle(conversationId, newTitle);
+      
+      // Update the conversation in state
+      setConversations(prev => prev.map(conv => 
+        conv.conversation_id === conversationId 
+          ? { ...conv, title: newTitle, updated_at: new Date().toISOString() }
+          : conv
+      ));
+      
+      // Update current conversation if it's the one being edited
+      if (currentConversation?.conversation_id === conversationId) {
+        setCurrentConversation(prev => ({ ...prev, title: newTitle }));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to update conversation title:', error);
+      alert('Failed to update title. Please try again.');
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
@@ -363,6 +387,7 @@ export default function Chat() {
         onSelectConversation={handleSelectConversation}
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
+        onUpdateTitle={handleUpdateConversationTitle}
         user={user}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}

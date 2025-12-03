@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, MessageSquare, User, Moon, Menu, X, Trash2 } from 'lucide-react';
+import { Plus, MessageSquare, User, Moon, Menu, X, Trash2, Pencil, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPageUrl } from '../../utils';
 import { Link } from 'react-router-dom';
@@ -11,10 +12,24 @@ export default function ChatSidebar({
   onSelectConversation,
   onNewChat,
   onDeleteConversation,
+  onUpdateTitle,
   user,
   isOpen,
   onToggle
 }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef(null);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
+
   const handleLogout = () => {
     cognitoAuth.logout();
   };
@@ -23,6 +38,43 @@ export default function ChatSidebar({
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this conversation?')) {
       onDeleteConversation?.(conversationId);
+    }
+  };
+
+  const handleStartEdit = (e, conversation) => {
+    e.stopPropagation();
+    setEditingId(conversation.conversation_id);
+    setEditValue(conversation.title || 'New Chat');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e?.stopPropagation();
+    
+    if (!editValue.trim() || !editingId) {
+      handleCancelEdit();
+      return;
+    }
+
+    setIsSaving(true);
+    const success = await onUpdateTitle?.(editingId, editValue.trim());
+    setIsSaving(false);
+
+    if (success) {
+      handleCancelEdit();
+    }
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
     }
   };
 
@@ -96,6 +148,7 @@ export default function ChatSidebar({
           ) : (
             (Array.isArray(conversations) ? conversations : []).map((conversation) => {
               const isActive = currentConversation?.conversation_id === conversation.conversation_id;
+              const isEditing = editingId === conversation.conversation_id;
               
               return (
                 <div
@@ -107,13 +160,32 @@ export default function ChatSidebar({
                       ? 'bg-purple-500/30 border border-purple-400/40'
                       : 'bg-white/5 border border-transparent'
                   )}
-                  onClick={() => onSelectConversation(conversation)}
+                  onClick={() => !isEditing && onSelectConversation(conversation)}
                 >
-                  <div className="flex items-center gap-2 pr-8">
+                  <div className="flex items-center gap-2 pr-16">
                     <MessageSquare className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                    <span className="text-sm text-purple-100 truncate">
-                      {conversation.title || 'New Chat'}
-                    </span>
+                    {isEditing ? (
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={handleEditKeyDown}
+                        onBlur={handleSaveEdit}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={isSaving}
+                        className={cn(
+                          'flex-1 text-sm text-purple-100 bg-purple-900/50 border border-purple-400/50 rounded px-2 py-0.5',
+                          'focus:outline-none focus:ring-1 focus:ring-purple-400',
+                          isSaving && 'opacity-50'
+                        )}
+                        maxLength={100}
+                      />
+                    ) : (
+                      <span className="text-sm text-purple-100 truncate">
+                        {conversation.title || 'New Chat'}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-xs text-purple-300/60">
@@ -126,19 +198,56 @@ export default function ChatSidebar({
                     )}
                   </div>
                   
-                  {/* Delete button */}
-                  {onDeleteConversation && (
-                    <button
-                      onClick={(e) => handleDelete(e, conversation.conversation_id)}
-                      className={cn(
-                        'absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded',
-                        'text-purple-300/50 hover:text-red-400 hover:bg-red-500/20',
-                        'opacity-0 group-hover:opacity-100 transition-opacity'
+                  {/* Action buttons */}
+                  {!isEditing && (
+                    <div className={cn(
+                      'absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5',
+                      'opacity-0 group-hover:opacity-100 transition-opacity'
+                    )}>
+                      {/* Edit button */}
+                      {onUpdateTitle && (
+                        <button
+                          onClick={(e) => handleStartEdit(e, conversation)}
+                          className={cn(
+                            'p-1.5 rounded',
+                            'text-purple-300/50 hover:text-purple-200 hover:bg-purple-500/20'
+                          )}
+                          title="Edit title"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                       )}
-                      title="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      {/* Delete button */}
+                      {onDeleteConversation && (
+                        <button
+                          onClick={(e) => handleDelete(e, conversation.conversation_id)}
+                          className={cn(
+                            'p-1.5 rounded',
+                            'text-purple-300/50 hover:text-red-400 hover:bg-red-500/20'
+                          )}
+                          title="Delete conversation"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Save indicator when editing */}
+                  {isEditing && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={isSaving}
+                        className={cn(
+                          'p-1.5 rounded',
+                          'text-green-400 hover:text-green-300 hover:bg-green-500/20'
+                        )}
+                        title="Save (Enter)"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               );
