@@ -192,11 +192,7 @@ Because we use **DynamoDB as our only database** (plus S3 for artifacts), our �
 
 ## 6. Integrating Feedback
 
-Throughout the project, we received feedback at multiple checkpoints and used it to refine both the scope and the technical details of Mira. During the **proposal phase**, instructors encouraged us to be realistic about what we could build within a single semester and to clearly separate “nice-to-have” features from core functionality. In response, we narrowed our initial vision to focus on a well-polished chat experience with birth chart visualizations and basic emotional-safety considerations, rather than attempting to add advanced analytics, social features, or multiple AI personas in the first iteration.
-
-In the **progress phase**, feedback focused more on concrete technical aspects: data modeling, IAM clarity, and observability. We were encouraged to move from a more ad-hoc description of our DynamoDB design to a clearly documented, user-centric key schema with item types and access patterns spelled out. This led directly to the more detailed data plan and ERD in `data/DataRequirements.md` and `docs/final/data models/`, as well as tighter IAM policies in the `lambda_api` and `dynamodb_mira` modules. We also added CloudWatch alarms and refined our logging approach based on suggestions to think more about how we would debug production issues.
-
-Near the end of the semester, **final-round feedback** from peers and the instructor nudged us toward polishing reliability and documentation rather than chasing additional features. For example, we devoted time to documenting how to run the app (`docs/final/RunningProject.md` and the top-level README), ensuring that our Terraform configuration was clean and reproducible, and curating cloud evidence screenshots that matched the architecture diagram. This last iteration of feedback helped us ship a project that is not just functional but also understandable and maintainable, which is a key learning outcome of the course.
+Placeholder.
 
 ---
 
