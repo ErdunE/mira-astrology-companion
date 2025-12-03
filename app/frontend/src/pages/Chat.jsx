@@ -5,6 +5,7 @@ import { createPageUrl } from '../utils';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatArea from '../components/chat/ChatArea';
 import VisualizationArea from '../components/chat/VisualizationArea';
+import { motion } from 'framer-motion';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
@@ -30,7 +31,7 @@ export default function Chat() {
       
       // Check if cache belongs to current user
       if (cachedUserId && currentUser?.sub && cachedUserId !== currentUser.sub) {
-        console.log('🔄 Cache belongs to different user - need fresh profile');
+        console.log('Cache belongs to different user - need fresh profile');
         return null;
       }
       
@@ -38,7 +39,7 @@ export default function Chat() {
       const fiveMinutes = 5 * 60 * 1000;
       const timeSinceCheck = Date.now() - parseInt(profileCheckTime);
       if (timeSinceCheck >= fiveMinutes) {
-        console.log('⏰ Cache expired');
+        console.log('Cache expired');
         return null;
       }
       
@@ -125,30 +126,30 @@ export default function Chat() {
         let userProfile = isValidCachedProfile();
         
         if (userProfile) {
-          console.log('✅ Using cached profile for Chat');
+          console.log('Using cached profile for Chat');
         }
         
         // If no valid cache, try to fetch from API
         if (!userProfile) {
           try {
-            console.log('🔍 Fetching profile from API...');
+            console.log('Fetching profile from API...');
             userProfile = await apiClient.profile.get();
             
             if (userProfile && userProfile.birth_date) {
               // Cache the profile with user ID
               cacheUserProfile(userProfile);
-              console.log('✅ Profile fetched and cached');
+              console.log('Profile fetched and cached');
             }
           } catch (profileError) {
             // 404 means no profile - redirect to onboarding
             if (profileError.status === 404) {
-              console.log('📝 No profile found (404) - redirecting to onboarding');
+              console.log('No profile found (404) - redirecting to onboarding');
               clearProfileCache();
               window.location.href = createPageUrl('Onboarding');
               return;
             }
             // 500 or other errors - if we have no valid cache, redirect to onboarding
-            console.warn('⚠️ Could not fetch profile:', profileError);
+            console.warn('Could not fetch profile:', profileError);
             clearProfileCache();
             console.log('Redirecting to onboarding to verify/create profile');
             window.location.href = createPageUrl('Onboarding');
@@ -158,7 +159,7 @@ export default function Chat() {
         
         // If still no profile, redirect to onboarding
         if (!userProfile || !userProfile.birth_date) {
-          console.log('📝 No valid profile - redirecting to onboarding');
+          console.log('No valid profile - redirecting to onboarding');
           clearProfileCache();
           window.location.href = createPageUrl('Onboarding');
           return;
@@ -372,14 +373,23 @@ export default function Chat() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-2 border-border border-t-celestial animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex overflow-hidden">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Sidebar */}
       <ChatSidebar
         conversations={conversations}

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CrescentMoon } from '@/components/ui/celestial-icons';
 
 /**
  * Fix malformed inline markdown tables by inserting proper newlines
@@ -38,7 +40,7 @@ function fixMalformedTables(text) {
 /**
  * Error message shown when LLM runs out of tokens before generating an answer
  */
-const TOKEN_LIMIT_ERROR_MESSAGE = `⚠️ **Your question was too complex for me to fully answer.**
+const TOKEN_LIMIT_ERROR_MESSAGE = `**Your question was too complex for me to fully answer.**
 
 I ran out of processing capacity while thinking through your request. This happens with very detailed or multi-part questions.
 
@@ -104,105 +106,126 @@ export default function MessageBubble({ message, isPending = false }) {
   
   // Filter AI response to remove internal reasoning
   const filteredResponse = filterAIResponse(ai_response);
+  const isError = filteredResponse === TOKEN_LIMIT_ERROR_MESSAGE;
   
   return (
     <div className="space-y-4">
       {/* User message */}
       {user_message && (
-        <div className="flex gap-3 justify-end">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-3 justify-end"
+        >
           <div className="max-w-[85%] flex flex-col items-end">
-            <div className="rounded-2xl px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
+            <div className="rounded-2xl px-4 py-3 bg-foreground text-background">
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{user_message}</p>
             </div>
             {created_at && (
-              <span className="text-xs text-purple-300/40 mt-1">
+              <span className="text-xs text-muted-foreground/40 mt-1.5">
                 {new Date(created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </div>
-        </div>
+          <div className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </motion.div>
       )}
       
       {/* AI response */}
       {(filteredResponse || isPending) && (
-        <div className="flex gap-3 justify-start">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center mt-0.5 flex-shrink-0">
-            <span className="text-white text-sm font-semibold">M</span>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-3 justify-start"
+        >
+          <div className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center mt-0.5 flex-shrink-0">
+            <CrescentMoon size={16} className="text-celestial" />
           </div>
           <div className="max-w-[85%]">
             {isPending ? (
-              <div className="bg-white/10 backdrop-blur-sm border border-purple-400/30 rounded-2xl px-4 py-3">
+              <div className="bg-card border border-border rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-                  <span className="text-purple-200 text-sm">Sending...</span>
+                  <Loader2 className="w-4 h-4 text-celestial animate-spin" />
+                  <span className="text-muted-foreground text-sm">Sending...</span>
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl px-4 py-3 bg-white/10 backdrop-blur-sm border border-purple-400/30 text-purple-50">
+              <div className={cn(
+                "rounded-2xl px-4 py-3 bg-card border",
+                isError ? "border-destructive/30 bg-destructive/5" : "border-border"
+              )}>
+                {isError && (
+                  <div className="flex items-center gap-2 mb-2 text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Response limit reached</span>
+                  </div>
+                )}
                 <ReactMarkdown
-                  className="text-sm prose prose-sm prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  className="text-sm prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    p: ({ children }) => <p className="my-1 leading-relaxed">{children}</p>,
-                    ul: ({ children }) => <ul className="my-1 ml-4 list-disc">{children}</ul>,
-                    ol: ({ children }) => <ol className="my-1 ml-4 list-decimal">{children}</ol>,
-                    li: ({ children }) => <li className="my-0.5">{children}</li>,
-                    h1: ({ children }) => <h1 className="text-lg font-semibold my-2">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-base font-semibold my-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-sm font-semibold my-2">{children}</h3>,
-                    strong: ({ children }) => <strong className="font-semibold text-purple-100">{children}</strong>,
-                    em: ({ children }) => <em className="italic text-purple-200">{children}</em>,
+                    p: ({ children }) => <p className="my-2 leading-relaxed text-foreground">{children}</p>,
+                    ul: ({ children }) => <ul className="my-2 ml-4 list-disc text-foreground">{children}</ul>,
+                    ol: ({ children }) => <ol className="my-2 ml-4 list-decimal text-foreground">{children}</ol>,
+                    li: ({ children }) => <li className="my-1 text-foreground">{children}</li>,
+                    h1: ({ children }) => <h1 className="font-display text-lg font-medium my-3 text-foreground">{children}</h1>,
+                    h2: ({ children }) => <h2 className="font-display text-base font-medium my-3 text-foreground">{children}</h2>,
+                    h3: ({ children }) => <h3 className="font-display text-sm font-medium my-2 text-foreground">{children}</h3>,
+                    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-muted-foreground">{children}</em>,
                     blockquote: ({ children }) => (
-                      <blockquote className="border-l-2 border-purple-400/50 pl-3 my-2 italic text-purple-200/80">
+                      <blockquote className="border-l-2 border-celestial/50 pl-3 my-3 italic text-muted-foreground">
                         {children}
                       </blockquote>
                     ),
                     code: ({ inline, children }) =>
                       inline ? (
-                        <code className="px-1 py-0.5 rounded bg-purple-500/20 text-purple-200 text-xs">{children}</code>
+                        <code className="px-1.5 py-0.5 rounded bg-secondary text-foreground text-xs font-mono">{children}</code>
                       ) : (
-                        <code className="block bg-purple-500/20 rounded p-2 text-xs text-purple-200 my-2 overflow-x-auto">{children}</code>
+                        <code className="block bg-secondary rounded-lg p-3 text-xs text-foreground my-2 overflow-x-auto font-mono">{children}</code>
                       ),
                     a: ({ href, children }) => (
                       <a 
                         href={href} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-purple-300 hover:text-purple-200 underline"
+                        className="text-celestial hover:underline"
                       >
                         {children}
                       </a>
                     ),
                     // Table components for GFM table support
                     table: ({ children }) => (
-                      <div className="my-3 overflow-x-auto rounded-lg border border-purple-400/30">
+                      <div className="my-3 overflow-x-auto rounded-lg border border-border">
                         <table className="w-full text-left text-sm">
                           {children}
                         </table>
                       </div>
                     ),
                     thead: ({ children }) => (
-                      <thead className="bg-purple-500/20 text-purple-100 font-semibold">
+                      <thead className="bg-secondary text-foreground font-medium">
                         {children}
                       </thead>
                     ),
                     tbody: ({ children }) => (
-                      <tbody className="divide-y divide-purple-400/20">
+                      <tbody className="divide-y divide-border">
                         {children}
                       </tbody>
                     ),
                     tr: ({ children }) => (
-                      <tr className="hover:bg-purple-500/10 transition-colors">
+                      <tr className="hover:bg-secondary/50 transition-colors">
                         {children}
                       </tr>
                     ),
                     th: ({ children }) => (
-                      <th className="px-3 py-2 text-purple-100 font-semibold border-b border-purple-400/30">
+                      <th className="px-3 py-2 text-foreground font-medium border-b border-border">
                         {children}
                       </th>
                     ),
                     td: ({ children }) => (
-                      <td className="px-3 py-2 text-purple-50">
+                      <td className="px-3 py-2 text-foreground">
                         {children}
                       </td>
                     ),
@@ -213,7 +236,7 @@ export default function MessageBubble({ message, isPending = false }) {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

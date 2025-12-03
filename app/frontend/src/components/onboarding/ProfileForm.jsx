@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +8,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar as CalendarIcon, Sparkles, AlertCircle, MapPin, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowRight, AlertCircle, MapPin, Clock } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
+import { ZodiacWheel, CelestialDivider } from '@/components/ui/celestial-icons';
 
 const countries = [
   'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 
@@ -112,50 +114,55 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
     }
   };
 
+  const inputBaseStyles = "bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:border-celestial focus:ring-1 focus:ring-celestial/30 transition-all duration-200";
+  const inputErrorStyles = "border-destructive/60 focus:border-destructive focus:ring-destructive/30";
+
   return (
-    <Card className="w-full max-w-2xl bg-gradient-to-br from-slate-900/90 via-purple-900/80 to-indigo-900/90 backdrop-blur-lg border-purple-400/40 shadow-2xl">
-      <CardHeader className="border-b border-purple-400/30 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-lg">
-            <Sparkles className="w-6 h-6 text-purple-300" />
+    <Card className="w-full bg-card/80 backdrop-blur-sm border border-border/60 shadow-xl">
+      <CardHeader className="border-b border-border/50 pb-6 px-6 md:px-8 pt-6 md:pt-8">
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-xl bg-secondary/50 border border-border/50">
+            <ZodiacWheel size={28} className="text-celestial" />
           </div>
-          <div>
-            <CardTitle className="text-3xl text-white font-bold">Your Cosmic Profile</CardTitle>
-            <CardDescription className="text-purple-200/80 mt-1">
+          <div className="flex-1">
+            <CardTitle className="font-display text-2xl md:text-3xl text-foreground">
+              Your Cosmic Profile
+            </CardTitle>
+            <CardDescription className="text-muted-foreground mt-1.5">
               Enter your birth details to unlock personalized astrology insights
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-8">
+      
+      <CardContent className="px-6 md:px-8 py-6 md:py-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Birth date */}
           <div className="space-y-2">
-            <Label className="text-white font-medium flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4 text-purple-400" />
-              Birth Date <span className="text-pink-400">*</span>
+            <Label className="text-foreground font-medium flex items-center gap-2 text-sm">
+              <CalendarIcon className="w-4 h-4 text-celestial" />
+              Birth Date
+              <span className="text-destructive">*</span>
             </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full justify-start text-left font-normal bg-white/10 border-2 text-white hover:bg-white/20 hover:border-purple-400/60 transition-all ${
-                    touched.birth_date && errors.birth_date 
-                      ? 'border-red-400/60' 
-                      : 'border-purple-400/40'
+                  className={`w-full justify-start text-left font-normal h-11 ${inputBaseStyles} ${
+                    touched.birth_date && errors.birth_date ? inputErrorStyles : ''
                   }`}
                   onBlur={() => handleBlur('birth_date')}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4 text-purple-400" />
+                  <CalendarIcon className="mr-3 h-4 w-4 text-muted-foreground" />
                   {formData.birth_date ? (
-                    <span className="text-white">{format(formData.birth_date, 'PPP')}</span>
+                    <span className="text-foreground">{format(formData.birth_date, 'PPP')}</span>
                   ) : (
-                    <span className="text-purple-300/70">Select your date of birth</span>
+                    <span className="text-muted-foreground">Select your date of birth</span>
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-slate-900 border-purple-400/50">
+              <PopoverContent className="w-auto p-0 bg-card border-border">
                 <Calendar
                   mode="single"
                   selected={formData.birth_date}
@@ -167,23 +174,27 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                   captionLayout="dropdown-buttons"
                   fromYear={1900}
                   toYear={new Date().getFullYear()}
-                  className="text-white"
                 />
               </PopoverContent>
             </Popover>
             {touched.birth_date && errors.birth_date && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
+              <motion.p 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-destructive text-sm flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
                 {errors.birth_date}
-              </p>
+              </motion.p>
             )}
           </div>
 
           {/* Birth time */}
           <div className="space-y-2">
-            <Label htmlFor="birth_time" className="text-white font-medium flex items-center gap-2">
-              <Clock className="w-4 h-4 text-purple-400" />
-              Birth Time <span className="text-pink-400">*</span>
+            <Label htmlFor="birth_time" className="text-foreground font-medium flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-celestial" />
+              Birth Time
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               id="birth_time"
@@ -194,35 +205,42 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                 setTouched({ ...touched, birth_time: true });
               }}
               onBlur={() => handleBlur('birth_time')}
-              className={`bg-white/10 border-2 text-white placeholder:text-purple-300/50 focus:border-purple-400 transition-colors ${
-                touched.birth_time && errors.birth_time 
-                  ? 'border-red-400/60' 
-                  : 'border-purple-400/40'
+              className={`h-11 ${inputBaseStyles} ${
+                touched.birth_time && errors.birth_time ? inputErrorStyles : ''
               }`}
               placeholder="14:30"
               required
             />
             {touched.birth_time && errors.birth_time && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
+              <motion.p 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-destructive text-sm flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
                 {errors.birth_time}
-              </p>
+              </motion.p>
             )}
-            <p className="text-purple-300/60 text-xs">
-              💡 Required for accurate birth chart and personalized astrology insights
+            <p className="text-muted-foreground/70 text-xs">
+              Required for accurate birth chart and personalized astrology insights
             </p>
           </div>
 
+          <CelestialDivider className="py-2" />
+
           {/* Birth place */}
           <div className="space-y-4">
-            <Label className="text-white font-medium flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-purple-400" />
-              Birth Location <span className="text-pink-400">*</span>
+            <Label className="text-foreground font-medium flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-celestial" />
+              Birth Location
+              <span className="text-destructive">*</span>
             </Label>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="birth_city" className="text-purple-200 text-sm">City</Label>
+                <Label htmlFor="birth_city" className="text-muted-foreground text-xs font-normal">
+                  City
+                </Label>
                 <Input
                   id="birth_city"
                   value={formData.birth_city}
@@ -231,23 +249,27 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                     setTouched({ ...touched, birth_city: true });
                   }}
                   onBlur={() => handleBlur('birth_city')}
-                  className={`bg-white/10 border-2 text-white placeholder:text-purple-300/50 focus:border-purple-400 transition-colors ${
-                    touched.birth_city && errors.birth_city 
-                      ? 'border-red-400/60' 
-                      : 'border-purple-400/40'
+                  className={`h-11 ${inputBaseStyles} ${
+                    touched.birth_city && errors.birth_city ? inputErrorStyles : ''
                   }`}
                   placeholder="e.g., New York"
                 />
                 {touched.birth_city && errors.birth_city && (
-                  <p className="text-red-400 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-destructive text-sm flex items-center gap-1.5"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
                     {errors.birth_city}
-                  </p>
+                  </motion.p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="birth_country" className="text-purple-200 text-sm">Country</Label>
+                <Label htmlFor="birth_country" className="text-muted-foreground text-xs font-normal">
+                  Country
+                </Label>
                 <Select
                   value={formData.birth_country}
                   onValueChange={(value) => {
@@ -257,21 +279,19 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                 >
                   <SelectTrigger 
                     id="birth_country"
-                    className={`bg-white/10 border-2 text-white focus:border-purple-400 transition-colors ${
-                      touched.birth_country && errors.birth_country 
-                        ? 'border-red-400/60' 
-                        : 'border-purple-400/40'
+                    className={`h-11 ${inputBaseStyles} ${
+                      touched.birth_country && errors.birth_country ? inputErrorStyles : ''
                     }`}
                     onBlur={() => handleBlur('birth_country')}
                   >
-                    <SelectValue placeholder="Select country" className="text-purple-300/70" />
+                    <SelectValue placeholder="Select country" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-purple-400/50 max-h-[200px]">
+                  <SelectContent className="bg-card border-border max-h-[200px]">
                     {countries.map((country) => (
                       <SelectItem 
                         key={country} 
                         value={country} 
-                        className="text-white hover:bg-purple-500/20 focus:bg-purple-500/30"
+                        className="text-foreground hover:bg-secondary focus:bg-secondary"
                       >
                         {country}
                       </SelectItem>
@@ -279,19 +299,23 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
                   </SelectContent>
                 </Select>
                 {touched.birth_country && errors.birth_country && (
-                  <p className="text-red-400 text-sm flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-destructive text-sm flex items-center gap-1.5"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
                     {errors.birth_country}
-                  </p>
+                  </motion.p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Info box */}
-          <Alert className="bg-indigo-500/10 border-indigo-400/30">
-            <Sparkles className="h-4 w-4 text-indigo-400" />
-            <AlertDescription className="text-indigo-200 text-sm ml-2">
+          <Alert className="bg-secondary/30 border-border/50">
+            <ZodiacWheel size={18} className="text-celestial" />
+            <AlertDescription className="text-muted-foreground text-sm ml-2">
               Your birth details help us create a personalized astrological profile and provide accurate cosmic insights.
             </AlertDescription>
           </Alert>
@@ -299,17 +323,17 @@ export default function ProfileForm({ onSubmit, user, initialData = null }) {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-6 text-lg rounded-xl font-semibold shadow-lg hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-foreground text-background hover:bg-foreground/90 h-12 text-base rounded-xl font-medium shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-background/30 border-t-background animate-spin" />
                 <span>Creating your profile...</span>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
                 <span>Continue to MIRA</span>
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </div>
             )}
           </Button>

@@ -7,17 +7,24 @@
  * Flow:
  * 1. Extract tokens from URL hash
  * 2. Check if user has an existing profile in DynamoDB via GET /profile
- * 3. If profile exists (200) → redirect to /chat
- * 4. If no profile (404) → redirect to /onboarding
- * 5. If error (500, network) → redirect to /onboarding (will check again there)
+ * 3. If profile exists (200) -> redirect to /chat
+ * 4. If no profile (404) -> redirect to /onboarding
+ * 5. If error (500, network) -> redirect to /onboarding (will check again there)
  */
 
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../api/apiClient';
 import { cognitoAuth } from '../services/cognitoAuth';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
+import { 
+  StarField, 
+  GradientOrb, 
+  MiraLogo,
+  CrescentMoon
+} from '@/components/ui/celestial-icons';
 
 export default function Callback() {
   const navigate = useNavigate();
@@ -82,12 +89,12 @@ export default function Callback() {
         
         // Try to check if user already has a profile in DynamoDB
         try {
-          console.log('🔍 Checking for existing profile...');
+          console.log('Checking for existing profile...');
           const existingProfile = await apiClient.profile.get();
           
           if (existingProfile && existingProfile.birth_date) {
             // Profile exists - cache it and go to chat
-            console.log('✅ Existing profile found:', existingProfile);
+            console.log('Existing profile found:', existingProfile);
             cacheUserProfile(existingProfile);
             
             setStatus('success');
@@ -96,7 +103,7 @@ export default function Callback() {
             return;
           } else {
             // Profile response exists but incomplete - go to onboarding
-            console.log('⚠️ Profile incomplete (no birth_date) - redirecting to onboarding');
+            console.log('Profile incomplete (no birth_date) - redirecting to onboarding');
             clearProfileCache();
             setStatus('success');
             setMessage('Let\'s complete your profile...');
@@ -106,7 +113,7 @@ export default function Callback() {
         } catch (profileError) {
           // 404 means no profile exists - new user, go to onboarding
           if (profileError.status === 404) {
-            console.log('📝 No profile found (404) - new user, redirecting to onboarding');
+            console.log('No profile found (404) - new user, redirecting to onboarding');
             clearProfileCache();
             setStatus('success');
             setMessage('Welcome! Let\'s set up your profile...');
@@ -116,7 +123,7 @@ export default function Callback() {
           
           // For other errors (500, network issues), still go to onboarding
           // Onboarding will try to check again and handle gracefully
-          console.warn('⚠️ Could not check profile (API error):', profileError);
+          console.warn('Could not check profile (API error):', profileError);
           console.log('Redirecting to onboarding - will check profile again there');
           clearProfileCache();
           setStatus('success');
@@ -139,49 +146,93 @@ export default function Callback() {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center px-6">
-      <div className="text-center">
+    <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-6">
+      {/* Background elements */}
+      <StarField count={20} className="opacity-30" />
+      <GradientOrb className="top-[-150px] right-[-150px]" size={400} />
+      <GradientOrb className="bottom-[-200px] left-[-150px]" size={350} />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 text-center max-w-md"
+      >
         {/* Status Icon */}
-        <div className="mb-6">
+        <div className="mb-8">
           {(status === 'processing' || status === 'checking') && (
-            <Loader2 className="w-16 h-16 text-purple-400 animate-spin mx-auto" />
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-celestial/20 blur-2xl scale-150 animate-pulse-soft" />
+              <div className="relative p-6 rounded-full border border-border bg-card/50">
+                <Loader2 className="w-10 h-10 text-celestial animate-spin" />
+              </div>
+            </div>
           )}
           {status === 'success' && (
-            <div className="relative">
-              <div className="absolute inset-0 bg-green-500 blur-2xl opacity-30 animate-pulse" />
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto relative animate-bounce" />
-            </div>
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative inline-block"
+            >
+              <div className="absolute inset-0 bg-celestial/20 blur-2xl scale-150" />
+              <div className="relative p-6 rounded-full border border-celestial/50 bg-celestial/10">
+                <Check className="w-10 h-10 text-celestial" />
+              </div>
+            </motion.div>
           )}
           {status === 'error' && (
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-500 blur-2xl opacity-30 animate-pulse" />
-              <XCircle className="w-16 h-16 text-red-400 mx-auto relative" />
-            </div>
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative inline-block"
+            >
+              <div className="absolute inset-0 bg-destructive/20 blur-2xl scale-150" />
+              <div className="relative p-6 rounded-full border border-destructive/50 bg-destructive/10">
+                <X className="w-10 h-10 text-destructive" />
+              </div>
+            </motion.div>
           )}
         </div>
         
         {/* Status Message */}
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="font-display text-2xl text-foreground mb-3">
           {status === 'processing' && 'Authenticating...'}
           {status === 'checking' && 'Checking Profile...'}
           {status === 'success' && 'Success!'}
           {status === 'error' && 'Authentication Failed'}
         </h2>
         
-        <p className="text-purple-200 text-lg">
+        <p className="text-muted-foreground">
           {message}
         </p>
         
         {/* Loading Dots */}
         {(status === 'processing' || status === 'checking') && (
-          <div className="flex justify-center gap-2 mt-6">
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="flex justify-center gap-2 mt-8">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 bg-celestial rounded-full"
+                animate={{
+                  y: [0, -8, 0],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: i * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
           </div>
         )}
-      </div>
+        
+        {/* Logo */}
+        <div className="mt-12 flex items-center justify-center gap-2 text-muted-foreground/50">
+          <MiraLogo size={20} />
+          <span className="text-sm">MIRA</span>
+        </div>
+      </motion.div>
     </div>
   );
 }
-
