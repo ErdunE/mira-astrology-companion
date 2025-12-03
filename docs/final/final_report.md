@@ -308,15 +308,12 @@ On the **engineering and operations side**, future work could include more compr
 
 ## 9. Use of Generative AI (Full Disclosure)
 
-In keeping with the course policies, we used Generative AI tools only to assist with writing quality and organization, not to generate original technical work, architecture, or code. For example, we used ChatGPT (accessed via Cursor) to help us restructure and polish the wording of this report and to turn our existing notes, READMEs, Terraform files, and design documents into clearer, more cohesive prose. All underlying technical decisions, architectural choices, Terraform configurations, and code were designed and implemented by the team based on course content and our own research.
+Tool usage (summary):
 
-We did **not** use Generative AI to generate cloud-related code, Terraform modules, tests, or to design our architecture or choose AWS services. Where AI suggestions touched on technical descriptions, we cross-checked them against our actual implementation and AWS documentation, and we treated them as editorial assistance rather than authoritative sources. If additional tools such as GitHub Copilot were used in IDEs for minor code completions or comment suggestions, they were similarly constrained to non-critical scaffolding and did not substitute for our own design work.
+- **ChatGPT**: Used to rephrase and polish wording in our README, progress documents, and this final report, and to refine pull request descriptions based on text we had already written.
+- **Claude AI**: Used to talk through debugging strategies and understand error messages or edge cases; we then wrote and modified the actual code ourselves.
+- **Base44**: Used at the very beginning of the project to scaffold an initial React frontend template provided as part of the course resources; we customized and extended this code manually and did not use Base44 for cloud infrastructure, Terraform, or report writing.
+- **Cursor AI assistant**: Used inside the IDE for small refactors, formatting, and comment/variable name suggestions, and to surface potential bugs; we treated these as hints and only committed changes we understood.
+- **Arcade**: Used solely to record and share our demo video; it did not generate any code or written project content.
 
-To maintain transparency, we have kept records of the prompts and conversations we had with AI tools during the writing process. These prompt logs are available upon request or can be included as an appendix to this report, depending on grading needs. Overall, Generative AI played a supporting role in improving the clarity and readability of text we had already drafted or conceptually outlined, while all substantive technical content and implementation details remain the work of the team.
-
-Tool used:  
-- ChatGPT: PRs, re
-- ClaudeAI: Debugging
-- Base44: 1st fro
-- Cursor: Bugs,formatting, comments
-- Arcade: Demo
+We did **not** use any Generative AI tools to generate cloud-related code (including Terraform, AWS configuration, or CI/CD), to write tests or data models, or to design our architecture. All technical decisions, infrastructure definitions, and application logic were created by the team, with AI tools used only to improve clarity, organization, and presentation of material we authored ourselves. Prompt logs for these tools are available upon request and can be included in an appendix if needed.
