@@ -32,7 +32,7 @@ Our architecture is documented visually using a Miro diagram that captures the f
   [Mira Architecture – Miro Board](https://miro.com/app/board/uXjVJsOlhH8=/?share_link_id=259343820262)
 
 - **PDF architecture diagram:**  
-  [Architecture Diagram (PDF)](architecture/CS6620%20FCC%20Final%20Project%20Architecture%20Diagram.pdf)
+  [Architecture Diagram (PDF)](https://github.com/CloudComputingMIA2025/team_chengdu_boyz/blob/dev/docs/final/architecture/CS6620%20FCC%20Final%20Project%20Architecture%20Diagram.pdf)
 
 
 
@@ -54,7 +54,7 @@ Finally, **networking and security** are provided by a dedicated VPC configured 
 
 ### 2.3 VPC Layout
 
-Our VPC is designed to meet the course requirement for a multi-AZ, production-style networking layout while still remaining simple enough to manage in Terraform. The `network_vpc` module provisions a VPC with the CIDR block `10.0.0.0/16`, which provides plenty of address space for subnets and future growth. Within this VPC, we define two public subnets (for example, `10.0.1.0/24` in `us-east-1a` and `10.0.2.0/24` in `us-east-1b`) and two private subnets (`10.0.11.0/24` and `10.0.12.0/24`), also spread across those two AZs. This layout gives us a clear separation between resources that need direct inbound internet access (e.g., NAT gateways or load balancers) and resources that should remain isolated (e.g., Lambda functions and VPC endpoints).
+Our VPC is designed to meet the course requirement for a multi-AZ, production-style networking layout while still remaining simple enough to manage in Terraform. The `network_vpc` module provisions a VPC with the CIDR block `10.0.0.0/16`, which provides plenty of address space for subnets and future growth. Within this VPC, we define two public subnets (`10.0.1.0/24` in `us-east-1a` and `10.0.2.0/24` in `us-east-1b`) and two private subnets (`10.0.11.0/24` and `10.0.12.0/24`), also spread across those two AZs. This layout gives us a clear separation between resources that need direct inbound internet access (e.g., NAT gateways or load balancers) and resources that should remain isolated (e.g., Lambda functions and VPC endpoints).
 
 Routing is configured to ensure that public subnets can reach the internet while private subnets use controlled egress paths. The public route tables send `0.0.0.0/0` through an Internet Gateway attached to the VPC, which is appropriate for resources like CloudFront origins or NAT gateways that occasionally need external connectivity. Private subnets are associated with route tables that do not expose them directly to the internet; instead, they rely on VPC gateway endpoints to reach AWS services such as DynamoDB and S3. The Bedrock VPC interface endpoint is explicitly placed into the private subnets so that calls from the Lambda function to Bedrock occur entirely over the AWS private backbone network, reducing the attack surface and avoiding public internet exposure.
 
@@ -146,21 +146,57 @@ In this section of the report, we include annotated screenshots from the AWS con
 
 **4.1 VPC and Subnets**  
 We include screenshots of the VPC details page showing the `10.0.0.0/16` CIDR block and the list of public and private subnets across two Availability Zones. Additional screenshots show the route tables associated with these subnets, highlighting routes to the Internet Gateway for public subnets and the use of gateway endpoints or restricted routes for private subnets.
+![VPC with public and private subnets](screenshots/vpc-subnets.png)  
+*Figure 4.1a – VPC `10.0.0.0/16` with associated public and private subnets across two Availability Zones.*
+
+![Route tables for public and private subnets](screenshots/vpc-route-tables.png)  
+*Figure 4.1b – Public route table sending `0.0.0.0/0` to an Internet Gateway and private route tables using restricted routes and VPC endpoints for internal AWS service access.*
 
 **4.2 Security Groups and Network Endpoints**  
 We show the security group associated with the Bedrock VPC endpoint and/or the Lambda function, including inbound and outbound rules. Another screenshot shows the list of VPC endpoints, with entries for S3, DynamoDB, and the Bedrock runtime, demonstrating that our backend calls to these services remain inside the VPC rather than going over the public internet.
+![Security group for Bedrock VPC endpoint](screenshots/security-group-bedrock.png)  
+*Figure 4.2a – Security group used by the Bedrock VPC endpoint, showing tightly scoped inbound rules and controlled outbound access.*
+
+![VPC endpoints for S3, DynamoDB, and Bedrock](screenshots/vpc-endpoints.png)  
+*Figure 4.2b – VPC endpoints for S3 and DynamoDB (gateway) and the Bedrock runtime (interface), keeping traffic to AWS services inside the VPC instead of traversing the public internet.*
 
 **4.3 Compute and API Layer**  
 Screenshots of the `mira-api-dev` Lambda function display its runtime (Python 3.10), memory and timeout settings, VPC configuration (private subnets and security group), and environment variables like `DYNAMODB_PROFILES_TABLE` and `ASTROLOGY_SECRET_NAME`. We also capture the API Gateway console views that show our HTTP API, its routes, integrations, and the Cognito authorizer configuration, confirming the relationship between API Gateway, Lambda, and Cognito.
+![Lambda function configuration for mira-api-dev](screenshots/lambda-mira-api-dev.png)  
+*Figure 4.3a – Lambda function `mira-api-dev` showing the Python runtime, memory and timeout settings, VPC attachment to private subnets, security groups, and key environment variables for DynamoDB tables and Secrets Manager.*
+
+![API Gateway routes and integrations](screenshots/api-gateway-routes.png)  
+*Figure 4.3b – HTTP API Gateway for Mira, showing routes, Lambda proxy integration to `mira-api-dev`, and Cognito authorizer enforcing JWT-based access control.*
 
 **4.4 Storage Services**  
 We provide screenshots of the DynamoDB tables provisioned for user profiles and conversations, including their table names, partition/sort key configurations, and sample items. Additional screenshots show the S3 buckets created by the `s3_static` module: the frontend static site bucket and the artifacts bucket, along with the CloudFront distribution configuration that points to the frontend bucket as an origin.
+![DynamoDB tables for user profiles and conversations](screenshots/dynamodb-tables.png)  
+*Figure 4.4a – DynamoDB tables for Mira user state, showing table names, partition/sort keys, and sample items for profiles and conversation summaries.*
+
+![S3 origin](screenshots/s3-frontend-bucket.png)
+*Figure 4.4b – S3 buckets.*
+
+![CloudFront distribution](screenshots/cloudfront-frontend.png)
+*Figure 4.4c – CloudFront distribution for the Mira frontend, configured with the static S3 bucket as its origin to serve the React SPA over HTTPS with global edge caching.*
 
 **4.5 Logs and Metrics**  
 CloudWatch screenshots show log groups for the `mira-api-dev` Lambda function, including example log streams that correspond to chat requests. We also capture the CloudWatch Metrics dashboard for Lambda errors and the specific `mira-api-dev-errors` alarm, including its threshold and evaluation period. This evidence demonstrates that we implemented monitoring in line with our documentation.
+![CloudWatch logs for mira-api-dev Lambda](screenshots/cloudwatch-logs-mira-api.png)  
+*Figure 4.5a – CloudWatch log group for the `mira-api-dev` Lambda function, showing request logs and execution reports used for debugging and tracing individual API calls.*
+
+![CloudWatch metric and alarm for mira-api-dev errors](screenshots/cloudwatch-metrics-alarm.png)  
+*Figure 4.5b – CloudWatch metric and the `mira-api-dev-errors` alarm, triggering when Lambda errors exceed the configured threshold within a one-minute period.*
+
+![AWS X-Ray trace for a Mira API request](screenshots/xray-trace-mira-api.png)  
+*Figure 4.5c – AWS X-Ray trace for a single Mira API request, showing end-to-end latency and errors across Lambda and downstream service calls.*
 
 **4.6 IAM Roles and Policies**  
 Finally, we include screenshots from the IAM console summarizing the Lambda execution role and its attached policies, as well as any roles used by API Gateway or supporting services. Captions explain how these policies restrict access to particular DynamoDB tables, S3 buckets, Bedrock models, and Secrets Manager secrets, reinforcing the least-privilege approach described in the Architecture and IAM sections.
+![IAM execution role for the Mira API Lambda](screenshots/iam-role-lambda-execution.png)  
+*Figure 4.6a – IAM execution role for the `mira-api-dev` Lambda function, with least-privilege policies granting access only to the specific DynamoDB tables, S3 buckets, Bedrock model ARNs, Secrets Manager secret, and CloudWatch logging.*
+
+![Team IAM admin and power user roles](screenshots/iam-role-team-admin.png)  
+*Figure 4.6b – Team IAM roles for Administrator and PowerUser access, used to separate full Terraform apply permissions from read-only or console-based access for other team members.*
 
 ---
 
@@ -192,7 +228,7 @@ Because we use **DynamoDB as our only database** (plus S3 for artifacts), our �
 
 ## 6. Integrating Feedback
 
-Placeholder.
+[Placeholder].
 
 ---
 
@@ -270,3 +306,10 @@ In keeping with the course policies, we used Generative AI tools only to assist 
 We did **not** use Generative AI to generate cloud-related code, Terraform modules, tests, or to design our architecture or choose AWS services. Where AI suggestions touched on technical descriptions, we cross-checked them against our actual implementation and AWS documentation, and we treated them as editorial assistance rather than authoritative sources. If additional tools such as GitHub Copilot were used in IDEs for minor code completions or comment suggestions, they were similarly constrained to non-critical scaffolding and did not substitute for our own design work.
 
 To maintain transparency, we have kept records of the prompts and conversations we had with AI tools during the writing process. These prompt logs are available upon request or can be included as an appendix to this report, depending on grading needs. Overall, Generative AI played a supporting role in improving the clarity and readability of text we had already drafted or conceptually outlined, while all substantive technical content and implementation details remain the work of the team.
+
+Tool used:  
+- ChatGPT: PRs, re
+- ClaudeAI: Debugging
+- Base44: 1st fro
+- Cursor: Bugs,formatting, comments
+- Arcade: Demo
