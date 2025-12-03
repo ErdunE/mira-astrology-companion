@@ -207,7 +207,11 @@ class AstrologyClient:
         birth_country = user_profile["birth_country"]  # "United States"
         nation_code = self._country_to_code(birth_country)
 
-        # Build subject object
+        # Build full name from profile
+        first_name = user_profile.get("first_name", "")
+        last_name = user_profile.get("last_name", "")
+        full_name = f"{first_name} {last_name}".strip() or "User"
+
         subject = {
             "year": year,
             "month": month,
@@ -216,7 +220,7 @@ class AstrologyClient:
             "minute": minute,
             "city": city,
             "nation": nation_code,
-            "name": "User",
+            "name": full_name,
             "zodiac_type": "Tropic",  # Western astrology
         }
 
@@ -226,7 +230,7 @@ class AstrologyClient:
         else:
             logger.warning("Geonames username not configured, API may require manual coordinates")
 
-        return {"subject": subject}
+        return {"subject": subject, "theme": "dark"}
 
     def _parse_city(self, birth_location: str) -> str:
         """

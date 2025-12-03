@@ -87,7 +87,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         user_id = extract_user_id_from_event(event)
     except ValueError as e:
-        return {"statusCode": 401, "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}})}
+        return {
+            "statusCode": 401,
+            "body": json.dumps({"error": {"code": "UNAUTHORIZED", "message": str(e)}}),
+        }
 
     # Parse request body
     body = event.get("body_json", {})
@@ -100,7 +103,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not user_message:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": {"code": "MISSING_MESSAGE", "message": "Message field is required"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "MISSING_MESSAGE",
+                        "message": "Message field is required",
+                    }
+                }
+            ),
         }
 
     logger.info(f"User message: {user_message[:100]}...")
@@ -126,7 +136,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Failed to get user profile: {e}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": {"code": "PROFILE_ERROR", "message": "Failed to retrieve user profile"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "PROFILE_ERROR",
+                        "message": "Failed to retrieve user profile",
+                    }
+                }
+            ),
         }
 
     # Step 2: Check for cached chart
@@ -135,7 +152,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not chart_data:
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": {"code": "CHART_ERROR", "message": "Failed to generate or retrieve chart"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "CHART_ERROR",
+                        "message": "Failed to generate or retrieve chart",
+                    }
+                }
+            ),
         }
 
     logger.info(f"Chart {'retrieved from cache' if is_cache_hit else 'generated'}")
@@ -153,7 +177,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Bedrock error: {e}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": {"code": "AI_ERROR", "message": "Failed to generate AI response"}}),
+            "body": json.dumps(
+                {
+                    "error": {
+                        "code": "AI_ERROR",
+                        "message": "Failed to generate AI response",
+                    }
+                }
+            ),
         }
 
     # Step 4: Save conversation
@@ -174,7 +205,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # Success response
     return {
         "statusCode": 200,
-        "body": json.dumps({"conversation_id": result_conversation_id, "message": ai_response, "chart_url": chart_url}),
+        "body": json.dumps(
+            {
+                "conversation_id": result_conversation_id,
+                "message": ai_response,
+                "chart_url": chart_url,
+            }
+        ),
     }
 
 
@@ -239,7 +276,12 @@ def get_or_generate_chart(user_id: str, user_profile: Dict[str, Any]) -> tuple[O
         timestamp = current_time
         s3_key = f"charts/{user_id}/{timestamp}.svg"
 
-        s3_client.put_object(Bucket=CHARTS_BUCKET, Key=s3_key, Body=svg_content, ContentType="image/svg+xml")
+        s3_client.put_object(
+            Bucket=CHARTS_BUCKET,
+            Key=s3_key,
+            Body=svg_content,
+            ContentType="image/svg+xml",
+        )
 
         chart_url = generate_presigned_chart_url(CHARTS_BUCKET, s3_key)
         logger.info(f"Chart saved to S3: {s3_key}")
@@ -297,7 +339,11 @@ def generate_presigned_chart_url(bucket: str, s3_key: str, expiration: int = 864
 
 
 def save_conversation(
-    user_id: str, conversation_id: Optional[str], user_message: str, ai_response: str, chart_url: Optional[str]
+    user_id: str,
+    conversation_id: Optional[str],
+    user_message: str,
+    ai_response: str,
+    chart_url: Optional[str],
 ) -> str:
     """
     Save conversation message to DynamoDB using thread-based schema.

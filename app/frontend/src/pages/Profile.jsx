@@ -76,6 +76,8 @@ export default function Profile() {
         if (existingProfile && existingProfile.birth_date) {
           // Transform backend format to form format
           setProfile({
+            first_name: existingProfile.first_name || '',
+            last_name: existingProfile.last_name || '',
             birth_date: existingProfile.birth_date,
             birth_time: existingProfile.birth_time,
             birth_city: existingProfile.birth_location?.split(',')[0]?.trim() || '',
@@ -97,6 +99,8 @@ export default function Profile() {
           const cachedProfile = getValidCachedProfile();
           if (cachedProfile) {
             setProfile({
+              first_name: cachedProfile.first_name || '',
+              last_name: cachedProfile.last_name || '',
               birth_date: cachedProfile.birth_date,
               birth_time: cachedProfile.birth_time,
               birth_city: cachedProfile.birth_location?.split(',')[0]?.trim() || '',
