@@ -1,8 +1,18 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Moon, Star, LogIn } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { 
+  StarField, 
+  GradientOrb, 
+  CrescentMoon, 
+  OrbitRings,
+  ZodiacWheel,
+  CelestialDivider,
+  MiraLogo
+} from '@/components/ui/celestial-icons';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -21,98 +31,196 @@ export default function Landing() {
     login();
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
+
+  const featureVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        delay: 0.8 + i * 0.1,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    }),
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 relative overflow-hidden">
-      {/* Animated stars background */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 3}s`
-            }}
-          >
-            <div className="w-1 h-1 bg-white rounded-full opacity-60" />
-          </div>
-        ))}
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background elements */}
+      <StarField count={40} className="opacity-40" />
+      <GradientOrb className="top-[-200px] left-[-200px]" size={600} />
+      <GradientOrb className="bottom-[-300px] right-[-200px]" size={500} />
+      
+      {/* Decorative orbit rings */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-30 pointer-events-none">
+        <OrbitRings size={800} className="text-foreground animate-orbit-slow" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
-        {/* Logo/Icon */}
-        <div className="mb-8 relative">
-          <div className="absolute inset-0 bg-purple-500 blur-3xl opacity-30 animate-pulse" />
-          <div className="relative bg-gradient-to-br from-purple-400 to-indigo-600 p-6 rounded-full">
-            <Moon className="w-16 h-16 text-white" />
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="w-full px-6 md:px-12 py-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-center gap-3"
+            >
+              <MiraLogo size={36} className="text-foreground" />
+              <span className="font-display text-xl tracking-wide text-foreground">MIRA</span>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Button
+                onClick={handleSignIn}
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign In
+              </Button>
+            </motion.div>
           </div>
-        </div>
+        </header>
 
-        {/* Main heading */}
-        <h1 className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 mb-4 text-center">
-          MIRA
-        </h1>
-        
-        <div className="flex items-center gap-2 mb-8">
-          <Star className="w-4 h-4 text-yellow-300" />
-          <p className="text-xl md:text-2xl text-purple-200 text-center">
-            Your Cosmic Companion
-          </p>
-          <Star className="w-4 h-4 text-yellow-300" />
-        </div>
+        {/* Main content */}
+        <main className="flex-1 flex items-center justify-center px-6 md:px-12 py-12 md:py-20">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="max-w-4xl mx-auto text-center"
+          >
+            {/* Logo/Icon */}
+            <motion.div variants={itemVariants} className="mb-8 md:mb-12 flex justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-celestial/20 blur-3xl scale-150 animate-pulse-soft" />
+                <div className="relative p-6 md:p-8 rounded-full border border-border/50 bg-card/50 backdrop-blur-sm celestial-glow">
+                  <CrescentMoon size={48} className="text-celestial md:w-16 md:h-16" />
+                </div>
+              </div>
+            </motion.div>
 
-        {/* Description */}
-        <p className="text-lg text-purple-100/80 text-center max-w-2xl mb-12 leading-relaxed">
-          Discover the wisdom of the stars. MIRA is your personal astrology AI,
-          ready to guide you through birth charts, cosmic compatibility, and the
-          mysteries of the zodiac.
-        </p>
+            {/* Main heading */}
+            <motion.h1 
+              variants={itemVariants}
+              className="font-display text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight mb-4 md:mb-6"
+            >
+              <span className="text-gradient-celestial">MIRA</span>
+            </motion.h1>
+            
+            <motion.p 
+              variants={itemVariants}
+              className="text-lg md:text-xl text-muted-foreground mb-4 tracking-wide"
+            >
+              Your Cosmic Companion
+            </motion.p>
 
-        {/* CTA Button */}
-        <Button
-          onClick={handleSignIn}
-          size="lg"
-          className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-12 py-6 text-lg rounded-full shadow-2xl shadow-purple-500/50 transition-all duration-300 hover:scale-105 hover:shadow-purple-500/70"
-        >
-          <Sparkles className="w-5 h-5 mr-2" />
-          Begin Your Journey
-        </Button>
+            {/* Description */}
+            <motion.p 
+              variants={itemVariants}
+              className="text-base md:text-lg text-muted-foreground/80 max-w-2xl mx-auto mb-10 md:mb-14 leading-relaxed px-4"
+            >
+              Discover the wisdom of the stars. MIRA is your personal astrology AI,
+              ready to guide you through birth charts, cosmic compatibility, and the
+              mysteries of the zodiac.
+            </motion.p>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 max-w-5xl">
-          <div className="text-center p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-purple-400/20">
-            <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Moon className="w-6 h-6 text-purple-300" />
+            {/* CTA Button */}
+            <motion.div variants={itemVariants}>
+              <Button
+                onClick={handleSignIn}
+                size="lg"
+                className="group bg-foreground text-background hover:bg-foreground/90 px-8 md:px-12 py-6 md:py-7 text-base md:text-lg rounded-full shadow-lg transition-all duration-300 hover:shadow-xl"
+              >
+                Begin Your Journey
+                <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </motion.div>
+
+            {/* Divider */}
+            <motion.div variants={itemVariants} className="mt-16 md:mt-24 mb-12 md:mb-16">
+              <CelestialDivider />
+            </motion.div>
+
+            {/* Features */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto px-4">
+              {[
+                {
+                  icon: CrescentMoon,
+                  title: "Birth Charts",
+                  description: "Explore your unique cosmic blueprint and celestial influences"
+                },
+                {
+                  icon: ZodiacWheel,
+                  title: "Compatibility",
+                  description: "Discover cosmic connections and relationship dynamics"
+                },
+                {
+                  icon: MiraLogo,
+                  title: "Daily Guidance",
+                  description: "Receive personalized insights and cosmic wisdom"
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  custom={index}
+                  variants={featureVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="group p-6 md:p-8 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/50 transition-all duration-300 hover:bg-card/50 hover:border-border"
+                >
+                  <div className="w-12 h-12 mb-5 flex items-center justify-center rounded-full bg-muted/50 group-hover:bg-celestial/10 transition-colors">
+                    <feature.icon size={24} className="text-celestial" />
+                  </div>
+                  <h3 className="font-display text-lg md:text-xl text-foreground mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              ))}
             </div>
-            <h3 className="text-lg font-semibold text-purple-100 mb-2">Birth Charts</h3>
-            <p className="text-purple-200/70 text-sm">
-              Explore your unique cosmic blueprint and celestial influences
+          </motion.div>
+        </main>
+
+        {/* Footer */}
+        <footer className="px-6 md:px-12 py-8">
+          <div className="max-w-7xl mx-auto text-center">
+            <p className="text-sm text-muted-foreground/50">
+              Crafted with celestial precision
             </p>
           </div>
-
-          <div className="text-center p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-purple-400/20">
-            <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-6 h-6 text-indigo-300" />
-            </div>
-            <h3 className="text-lg font-semibold text-purple-100 mb-2">Compatibility</h3>
-            <p className="text-purple-200/70 text-sm">
-              Discover cosmic connections and relationship dynamics
-            </p>
-          </div>
-
-          <div className="text-center p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-purple-400/20">
-            <div className="w-12 h-12 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Star className="w-6 h-6 text-pink-300" />
-            </div>
-            <h3 className="text-lg font-semibold text-purple-100 mb-2">Daily Guidance</h3>
-            <p className="text-purple-200/70 text-sm">
-              Receive personalized insights and cosmic wisdom
-            </p>
-          </div>
-        </div>
+        </footer>
       </div>
     </div>
   );

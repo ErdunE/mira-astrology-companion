@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { apiClient } from '@/api/apiClient';
 import { cognitoAuth } from '@/services/cognitoAuth';
 import { createPageUrl } from '../utils';
 import ProfileForm from '../components/onboarding/ProfileForm';
-import { Moon, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  StarField, 
+  GradientOrb, 
+  CrescentMoon,
+  OrbitRings,
+  MiraLogo,
+  SparkleIcon
+} from '@/components/ui/celestial-icons';
 
 export default function Onboarding() {
   const [user, setUser] = useState(null);
@@ -24,7 +32,7 @@ export default function Onboarding() {
       
       // Check if cache belongs to current user
       if (cachedUserId && currentUser?.sub && cachedUserId !== currentUser.sub) {
-        console.log('🔄 Cache belongs to different user - clearing');
+        console.log('Cache belongs to different user - clearing');
         clearProfileCache();
         return null;
       }
@@ -33,7 +41,7 @@ export default function Onboarding() {
       const fiveMinutes = 5 * 60 * 1000;
       const timeSinceCheck = Date.now() - parseInt(profileCheckTime);
       if (timeSinceCheck >= fiveMinutes) {
-        console.log('⏰ Cache expired');
+        console.log('Cache expired');
         return null;
       }
       
@@ -79,7 +87,7 @@ export default function Onboarding() {
     // Check valid cached profile for current user
     const cachedProfile = isValidCachedProfile();
     if (cachedProfile) {
-      console.log('✅ Valid cached profile found - redirecting to chat');
+      console.log('Valid cached profile found - redirecting to chat');
       window.location.href = createPageUrl('Chat');
       return;
     }
@@ -95,13 +103,13 @@ export default function Onboarding() {
         setUser(currentUser);
 
         // Check if profile exists in DynamoDB
-        console.log('🔍 Checking for existing profile in database...');
+        console.log('Checking for existing profile in database...');
         try {
           const existingProfile = await apiClient.profile.get();
           
           if (existingProfile?.birth_date) {
             // Profile exists in DynamoDB - cache and redirect to chat
-            console.log('✅ Profile found in database:', existingProfile);
+            console.log('Profile found in database:', existingProfile);
             cacheUserProfile(existingProfile);
             
             toast.success('Welcome back!', {
@@ -115,17 +123,17 @@ export default function Onboarding() {
             return;
           } else {
             // Profile exists but incomplete
-            console.log('⚠️ Profile incomplete - showing form');
+            console.log('Profile incomplete - showing form');
             clearProfileCache();
           }
         } catch (profileError) {
           if (profileError.status === 404) {
             // No profile exists - this is expected for new users, show the form
-            console.log('📝 No profile in database (404) - showing form for new user');
+            console.log('No profile in database (404) - showing form for new user');
             clearProfileCache();
           } else {
             // Other errors (500, network) - log but continue with form
-            console.warn('⚠️ Error checking profile (will show form):', profileError);
+            console.warn('Error checking profile (will show form):', profileError);
             clearProfileCache();
           }
         }
@@ -154,7 +162,7 @@ export default function Onboarding() {
       }
       
       // Show success message
-      toast.success('🎉 Profile created successfully!', {
+      toast.success('Profile created successfully!', {
         description: `Welcome to MIRA! Zodiac sign: ${response.profile?.zodiac_sign || 'Unknown'}`,
         duration: 3000,
       });
@@ -196,49 +204,84 @@ export default function Onboarding() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-2 border-border border-t-celestial animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 relative overflow-hidden">
-      {/* Background stars */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 3}s`
-            }}
-          >
-            <div className="w-1 h-1 bg-white rounded-full opacity-60" />
-          </div>
-        ))}
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background elements */}
+      <StarField count={25} className="opacity-30" />
+      <GradientOrb className="top-[-150px] right-[-150px]" size={400} />
+      <GradientOrb className="bottom-[-200px] left-[-150px]" size={350} />
+      
+      {/* Decorative orbit rings */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
+        <OrbitRings size={600} className="text-foreground animate-orbit-slow" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Moon className="w-8 h-8 text-purple-300" />
-            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">
-              Welcome to MIRA
-            </h1>
-            <Sparkles className="w-8 h-8 text-purple-300" />
+        <header className="w-full px-6 md:px-12 py-6">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <MiraLogo size={32} className="text-foreground" />
+            <span className="font-display text-lg tracking-wide text-foreground">MIRA</span>
           </div>
-          <p className="text-purple-200/80 text-lg">
-            Let's map your cosmic journey. Share your birth details to unlock personalized insights.
-          </p>
-        </div>
+        </header>
 
-        {/* Form */}
-        <ProfileForm onSubmit={handleSubmit} user={user} />
+        {/* Main content */}
+        <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8 md:py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-2xl"
+          >
+            {/* Header */}
+            <div className="text-center mb-8 md:mb-10">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center justify-center gap-3 mb-4"
+              >
+                <CrescentMoon size={28} className="text-celestial" />
+                <h1 className="font-display text-3xl md:text-4xl text-foreground">
+                  Welcome to MIRA
+                </h1>
+                <SparkleIcon size={28} className="text-celestial" />
+              </motion.div>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="text-muted-foreground text-base md:text-lg max-w-lg mx-auto"
+              >
+                Let's map your cosmic journey. Share your birth details to unlock personalized insights.
+              </motion.p>
+            </div>
+
+            {/* Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <ProfileForm onSubmit={handleSubmit} user={user} />
+            </motion.div>
+          </motion.div>
+        </main>
       </div>
     </div>
   );
