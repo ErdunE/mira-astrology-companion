@@ -208,19 +208,49 @@ Near the end of the semester, **final-round feedback** from peers and the instru
 
 ### 7.1 Challenges
 
-One of the most significant **technical challenges** we encountered was wiring together multiple Terraform modules and ensuring they applied in the correct order with the correct dependencies. For instance, the `lambda_api` module depends on outputs from `dynamodb_mira`, `s3_static`, `network_vpc`, `bedrock_vpce`, and `secrets_astrologer`. Early on, we saw errors where Lambda was created before the VPC or endpoints existed, leading to failed deployments and confusing error messages. We resolved this by carefully passing module outputs as inputs, adding explicit dependencies where necessary, and iterating on our Terraform structure until `terraform plan` and `terraform apply` were consistently clean.
+Our biggest challenge was making the **end-to-end chat path inside our VPC both reliable and fast**. A single user request has to survive several sequential steps: (1) potential **Lambda cold start**, (2) creation/attachment of a **VPC network interface (ENI)**, (3) establishing a **VPC endpoint connection** to reach managed services, (4) **retrieving and calling the external astrology API**, and finally (5) **calling the Bedrock model**. Early in the project, failures or timeouts at any of these layers meant that a full request only succeeded about **30% of the time** during our tests.
 
-Another challenge was integrating **Cognito, API Gateway, and the frontend** in a way that felt seamless to users. Getting callback URLs, logout URLs, and CORS settings exactly right took several rounds of trial and error. A misconfigured callback URL would leave users stuck after login, and overly restrictive CORS settings would cause seemingly random failures from the browser’s perspective. We addressed this by centralizing environment configuration in the frontend (`.env` and `env.js`), aligning those values with the `cognito_auth` and `api_gateway` module settings, and methodically testing the full login → chat flow in both local and deployed environments.
-
-We also had to manage **secrets and external API keys** responsibly. Storing the Astrologer API key in plain-text configuration would have been simpler in the short term but violated best practices. Instead, we used the `secrets_astrologer` Terraform module to store the key in Secrets Manager and grant the Lambda execution role permission to read it. This introduced its own complexity—ensuring the secret existed before Lambda deployed and that the environment variable names matched—but forced us to internalize good habits around secret management.
+To address this, we implemented the strategies. First, we added a **keep‑warm mechanism** using an EventBridge rule to periodically invoke the Lambda function, which greatly reduced cold‑start latency and ENI creation overhead. Second, we introduced a simple **cache hit/miss mechanism** for astrology data so that repeat requests for the same user and time window could be served without always calling the external API, reducing both latency and a major source of errors. Third, we **reduced the length of prompts** sent to Bedrock by summarizing prior context and trimming unnecessary details, which lowered token counts, improved model latency, and decreased the chance of timeouts. Together, these changes increased our observed end‑to‑end success rate from roughly **30% to about 99%**, turning an unreliable prototype into a system we could confidently demo.
 
 ### 7.2 Lessons Learned
 
-From these challenges, we drew several important lessons. First, we experienced firsthand how **infrastructure as code** fundamentally changes the development workflow: instead of clicking through the console, we treated infrastructure changes like code changes, subject to version control, reviews, and rollbacks. This approach is more rigorous but also more transparent, making it easier for all team members to understand the overall system.
+This project was structured around applying the core CS6620 concepts. For each required topic, we not only implemented the feature in Mira but also learned specific practical lessons:
 
-Second, we learned that **data modeling and IAM** should be addressed early in the design process, not as last-minute tasks. Our initial, somewhat vague notion of “we’ll store chat history in DynamoDB” evolved into a concrete schema with partition/sort keys and item types only after we sat down to write the data plan and ERD. Similarly, our IAM policies improved significantly when we wrote them in Terraform and could see precisely which ARNs we were granting access to. These experiences reinforced the idea that careful upfront thinking about data and security pays off in fewer surprises later.
+- **Cloud architecture (how components fit together)**:  
+  Designing Mira forced us to think in terms of layers: CloudFront + S3 for the React SPA, Cognito for identity, API Gateway as the front door, a Lambda backend, DynamoDB and S3 for state, and Bedrock plus an external astrology API for AI and domain data. Building and iterating on the architecture diagram taught us how to reason about trust boundaries, data flows, and how managed services compose into a coherent end-to-end system.
 
-Finally, we gained appreciation for the **power and limitations of managed services**. Using Lambda, DynamoDB, Cognito, and Bedrock meant that we did not have to maintain servers, databases, or model infrastructure ourselves, which is an enormous productivity boost. At the same time, each service has its own configuration model and quirks (such as cold starts or region-specific constraints) that you only fully appreciate when you build a real application.
+- **IAM roles for us to work as a team**:  
+  We created separate IAM roles (Administrator vs. PowerUser) and stored their policies in the `/roles` directory, instead of letting everyone use full admin access. This taught us how role design affects day‑to‑day collaboration—who can apply Terraform, who can inspect resources, and how to reduce the blast radius of mistakes while still keeping the team productive.
+
+- **Security and privacy considerations**:  
+  Because Mira handles potentially sensitive emotional content, we had to think carefully about authentication (Cognito-hosted sign‑in flows), secret management (Astrologer API key in Secrets Manager), and what we log. 
+
+- **VPC networking (subnets, routing, security groups)**:  
+  Implementing a multi‑AZ VPC with public and private subnets, route tables, and VPC endpoints for DynamoDB, S3, and Bedrock turned abstract networking concepts into concrete troubleshooting sessions. We learned how a misconfigured route or security group can break Lambda’s ability to reach Bedrock or external services, and how to systematically debug those connectivity issues.
+
+- **Compute (Lambda)**:  
+  Using Lambda as our only compute layer showed us what “event‑driven” really means: each chat message becomes a short‑lived invocation that orchestrates DynamoDB, Bedrock, and the astrology API. We also experienced cold starts and timeouts firsthand, and mitigated them with an EventBridge keep‑warm rule and careful tuning of memory/timeouts, which deepened our understanding of serverless performance characteristics.
+
+- **Storage / databases (DynamoDB, S3)**:  
+  Modeling user profiles and conversations in DynamoDB around `user_id` partition keys and sort‑key patterns taught us how to design access patterns first and schema second in NoSQL. Splitting storage between DynamoDB (metadata and chat summaries) and S3 (chart images and artifacts) helped us see why serverless systems often pair a key–value store with cheap object storage.
+
+- **IAM and security (roles, policies, least privilege)**:  
+  On the application side, we used Terraform to define a tightly scoped Lambda execution role that can only touch the specific DynamoDB tables, S3 buckets, Bedrock model ARNs, and one Secrets Manager secret that Mira actually needs. Iterating on these policies—fixing “AccessDenied” errors and removing wildcards—made least‑privilege feel less like a slogan and more like a practical, testable part of our development loop.
+
+- **Reliability and multi‑AZ design**:  
+  By choosing regional managed services (Lambda, DynamoDB, API Gateway, Cognito) and placing our VPC subnets across multiple AZs, we got resilience “for free” compared to running our own servers. We also thought explicitly about degradation modes—e.g., how the app should behave if the external astrology API or Bedrock is unavailable—which pushed us to design clearer error handling and fallback responses.
+
+- **Monitoring and logging**:  
+  Wiring CloudWatch Logs and creating a `mira-api-dev-errors` alarm showed us how even a small project benefits from basic observability. We learned to use structured logging and log insights queries to debug issues like failed Bedrock calls or misconfigured environment variables without having to reproduce every problem locally.
+
+- **Infrastructure as Code (Terraform)**:  
+  Managing modules like `network_vpc`, `dynamodb_mira`, `lambda_api`, and `api_gateway` in Terraform fundamentally changed how we work with AWS: we stopped “clicking in the console” and started reviewing plans, commits, and diffs. Dealing with module dependencies and occasional broken applies taught us to treat our infrastructure the same way we treat application code—with version control, code review, and rollbacks.
+
+- **CI/CD with automated testing**:  
+  Our GitHub Actions workflows run frontend/backend checks and Terraform validation on every push, so a broken test or invalid Terraform file blocks merges. This gave us direct experience with pipelines as a safety net: instead of discovering problems only during manual deploys, we learned to rely on CI feedback and to fix the pipeline when we changed how the project was built or tested.
+
+- **Cost-conscious design choices**:  
+  Choosing serverless services (Lambda, API Gateway, DynamoDB, S3, Cognito) and modeling Bedrock usage in a budget spreadsheet made us think concretely about how every architectural choice shows up on the AWS bill. The exercise of estimating monthly costs under different traffic patterns reinforced why on‑demand managed services are attractive for spiky, low‑to‑medium‑traffic workloads like Mira and for student projects in particular.
 
 ### 7.3 Future Work
 
