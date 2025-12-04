@@ -128,9 +128,44 @@ Using Terraform has several benefits. It ensures that our infrastructure is repr
 
 ### 3.9 CI/CD and Testing
 
-Our GitHub repository is structured to support CI/CD via two main workflows under `.github/workflows`: `ci.yml` for validation on every pull request and `cd.yml` for deployments. The CI workflow runs on PRs to `main` and `dev` and enforces a disciplined process: it checks PR titles and bodies against a required template, validates that the Summary/Linked Ticket/Changes/Testing sections are filled in, and then runs language- and infra-specific checks. For the **backend**, it installs Python 3.10 dependencies, runs syntax checks, Black formatting, Flake8 linting, an optional `isort` import-order check, measures Lambda package size, and executes tests with `pytest` (including a small `api_wrapper` test harness and optional coverage reporting). For the **frontend**, it installs Node 18 dependencies, verifies required `dev` and `build` scripts, runs optional TypeScript type checking, enforces ESLint, builds the Vite app, checks bundle size, and (when a `test` script exists) runs frontend tests. For the **infrastructure**, CI installs Terraform, runs `terraform fmt -check`, `terraform init -backend=false`, `terraform validate`, a non-blocking `tfsec` security scan, and additional best-practice checks for naming conventions, variable usage, and hardcoded secrets; a separate security job scans the repo for leaked credentials, tokens, database URLs, and sensitive files, plus runs a `safety` vulnerability check on Python dependencies.
+#### CI/CD Evidence
 
-The CD workflow runs on pushes to `dev` and `main` (and can also be triggered manually) and uses a change‑detection step to deploy only the components that were modified. The **Lambda deploy job** builds a production-ready zip from `app/backend`, installs platform‑appropriate dependencies, uploads the package to the `mira-api-<env>` function, waits for it to become active, and hits the `/health` endpoint on API Gateway to verify the deployment. The **frontend deploy job** builds the React SPA with environment variables fetched live from Cognito and CloudFront, uploads the build to the appropriate S3 bucket, verifies that `index.html` is present, and (if configured) invalidates the CloudFront cache so users see the new version quickly. The **Terraform job** initializes Terraform against the remote S3 backend, verifies that it is reading non‑empty remote state, runs `terraform plan` and applies only when changes are detected, then prints key outputs. Finally, a deployment summary job aggregates the results of all deploy steps, giving us a single, clear success/failure indicator and a human‑readable log of what was deployed, by whom, and from which commit.
+![Successful CI pipeline run](screenshots/ci-success-overview.png)  
+*Figure 3.9a – Successful `ci.yml` pipeline run on GitHub Actions, showing backend, frontend, and infrastructure jobs all passing with date/time and commit details.*
+
+![Successful CD deployment pipeline](screenshots/cd-success-overview.png)  
+*Figure 3.9b – Successful `cd.yml` deployment run, including Lambda update, frontend build + S3 upload, and Terraform apply.*
+
+![Example of a failing CI run and error](screenshots/ci-failure-example.png)  
+*Figure 3.9c – Example failing CI run; we fixed the issue and confirmed the next run succeeded.*
+
+![CI job and stage details](screenshots/ci-job-details.png)  
+*Figure 3.9d – Detailed view of a CI job showing the individual stages that run on every pull request.*
+
+Key workflow runs (for reference):
+
+- CI: [CI run](https://github.com/CloudComputingMIA2025/team_chengdu_boyz/actions/workflows/ci.yml)
+- CD: [Successful deploy run to `dev` environment](https://github.com/CloudComputingMIA2025/team_chengdu_boyz/actions/runs/19881825811)
+- CI failure example: [Failed CI run before fixing Terraform validation](https://github.com/CloudComputingMIA2025/team_chengdu_boyz/actions/runs/19837352302/job/56837734539)
+
+#### Testing Strategy and Evidence
+
+![CI pipeline with backend, frontend, and Terraform checks](screenshots/ci-success-overview.png)  
+*Figure 3.9e – GitHub Actions CI run showing backend Python checks, frontend build and lint, and Terraform validation all passing.*
+
+![Backend test job example](screenshots/tests-backend-ci.png)  
+*Figure 3.9f*
+
+![Health endpoint integration test in CD pipeline](screenshots/tests-cd-health-check.png)  
+*Figure 3.9g – Deployment pipeline calling the `/health` endpoint after updating the Lambda function, acting as a simple end-to-end integration test of API Gateway → Lambda → CloudWatch.*
+
+Our testing strategy combines unit-level checks for core backend utilities, automated validation of infrastructure and configuration, and lightweight integration testing in the deployment pipeline. On the backend, we chose to focus our unit tests on the shared `api_wrapper` module, which all Lambda handlers use. The self-tests embedded at the bottom of `app/backend/common/api_wrapper.py` exercise normal requests, query parameters, invalid JSON bodies, exceptions thrown from handlers, and path parameters. These tests are executed automatically in CI by the “Run Backend Tests” step in the **Backend Python CI** job, ensuring that our API wrapper consistently returns the correct HTTP status codes and response formats before any code is deployed.
+
+We also treat several of our CI checks as “tests” of the broader system configuration. The CI workflow runs Python syntax checks, Black and Flake8 on the backend, ESLint on the frontend, and a full Terraform validation and `tfsec` security scan under `infra/terraform`. These checks caught a number of issues early in development, such as misformatted Terraform files, an incorrect remote state configuration, and minor code-quality problems like unused imports and style violations; fixing these problems improved both reliability and maintainability before they could reach production. The separate `security-scan` job additionally verifies that no AWS credentials, secrets, or sensitive files are committed to the repository, which we consider part of our overall testing of the project’s security posture.
+
+For integration testing, we implemented a simple but effective smoke test in the CD workflow: after each successful Lambda deployment, the pipeline calls the `/health` endpoint on API Gateway and fails the deployment if the HTTP status is not 200. This step verifies that the updated Lambda function is reachable through API Gateway, that the function starts correctly with the current configuration and environment variables, and that basic logging and networking are working. During development, this health check helped us catch misconfigured function names and API URLs—broken deployments that might otherwise have appeared “green” from an infrastructure perspective but would not have responded correctly to real users.
+
+There are still areas where more automated tests would be valuable if we had additional time. In particular, we would like to add focused unit tests around `chat_handler` and the `astrology_client` / `bedrock_client` modules (for example, mocking external APIs and Bedrock to verify prompt construction, error handling, and fallback behavior), as well as component-level tests for critical frontend pages such as onboarding, chat, and profile management. Our current tests and CI checks cover core glue code, configuration, and a basic end-to-end health path, but deeper scenario-based tests and full end-to-end flows (e.g., “new user signs up → creates profile → sends first chat message → sees a valid response”) remain future work that would further increase confidence in the system.
 
 ### 3.10 Cost-Aware Design
 
