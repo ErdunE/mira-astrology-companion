@@ -76,6 +76,8 @@ Before starting, ensure you have the following installed:
 
 4. Run the frontend locally
    ```
+   cd ../app/frontend
+   npm run build
    npm run dev
    ```
    The Vite dev server runs on `http://localhost:5173` and proxies API calls to the URL defined in `VITE_API_BASE_URL`. Backend handlers are typically exercised through the deployed API or via unit tests.
