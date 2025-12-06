@@ -2,7 +2,7 @@
 Short project summary (2–3 sentences).
 > This repository contains the full implementation of our CS6620 Cloud Computing Final Project. The application provides an AI-powered astrology chat assistant that generates personalized birth charts and interpretations.
 
---
+---
 
 ### Team Members
 - Full Name: Erdun E
@@ -15,7 +15,7 @@ Describe what role each team member will take in this project and the tasks assi
 > Raj Kavathekar: Senior Prompt Enginer, Frontend Expert, Web developer  
 > Davie Wu: Site Reliability Engineer, Infrastructure Expert, Junior Developer
 
---
+---
 
 ### Repository Structure
 
@@ -33,8 +33,7 @@ Your repo must follow this layout:
 README.md    # Project overview and documentation
 ```
 
-
---
+---
 
 ### Project Overview
 
@@ -67,8 +66,7 @@ Python/Java, and other programming languages approved by Prof GS for other parts
 > Infra: Terraform  
 > Frontend: Javascript, HTML, CSS
 
-
---
+---
 
 ### Architecture
 
@@ -112,14 +110,13 @@ Your app must be in at least 2 AZs to ensure reliability
 **How will you manage latency and costs through auto-scaling/load balancing?**
 > We will manage latency by using CloudFront to route users efficiently, since we are serverless, we will handle costs through a pay-as-you-go-system to incur it on demand and by setting billing alarms to make sure 
 
-
---
+---
 ### Infrastructure as Code
 As a requirement for this project, you must develop IaC. Define how this will look for your particular project, and how you will do IaC and with which tools (e.g. Terraform).
 
 >For our project's IaC, we are using serverless architecure, using Terraform we are defining Lambda functions and creating service modules that we plan on using for our backend. With the help of terraform we are planning and applying these changes and requesting services for our project through AWS.
 
---
+---
 ### IAM Roles and Policies
 Outline the IAM Roles you need to create for this project and explain why each role is necessary.
 > Roles:  
@@ -129,7 +126,7 @@ Outline the IAM Roles you need to create for this project and explain why each r
 For this phase you must complete all IAM policies and store them in this repo under `\roles`.
 
 
---
+---
 
 ### Project Budget
 
@@ -142,7 +139,7 @@ Use the structure below for your spreadsheet. Feel free to add additional column
 
 Add up time and cost at the end of the columns.
 
---
+---
 
 ### References
 
@@ -150,7 +147,7 @@ Any resources or citations should be listed here
 []  
 Astrology API: https://github.com/g-battaglia/v4.astrologer-api
 
---
+---
 
 ### Demo video
 [Placeholder](https://drive.google.com/file/d/1MpcwINBp7hNjxJivjRT4534dZtRThf-U/view?usp=share_link)
