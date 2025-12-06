@@ -149,3 +149,20 @@ Add up time and cost at the end of the columns.
 Any resources or citations should be listed here
 []  
 Astrology API: https://github.com/g-battaglia/v4.astrologer-api
+
+--
+
+### Demo video
+[Placeholder](https://drive.google.com/file/d/1MpcwINBp7hNjxJivjRT4534dZtRThf-U/view?usp=share_link)
+
+### Use of Generative AI (Full Disclosure)
+
+Tool usage (summary):
+
+- **ChatGPT**: Used to rephrase and polish wording in our README, progress documents, and this final report, and to refine pull request descriptions based on text we had already written.
+- **Claude AI**: Used to talk through debugging strategies and understand error messages or edge cases; we then wrote and modified the actual code ourselves.
+- **Base44**: Used at the very beginning of the project to scaffold an initial React frontend template provided as part of the course resources; we customized and extended this code manually and did not use Base44 for cloud infrastructure, Terraform, or report writing.
+- **Cursor AI assistant**: Used inside the IDE for small refactors, formatting, and comment/variable name suggestions, and to surface potential bugs; we treated these as hints and only committed changes we understood.
+- **Arcade**: Used solely to record and share our demo video; it did not generate any code or written project content.
+
+We did **not** use any Generative AI tools to generate cloud-related code (including Terraform, AWS configuration, or CI/CD), to write tests or data models, or to design our architecture. All technical decisions, infrastructure definitions, and application logic were created by the team, with AI tools used only to improve clarity, organization, and presentation of material we authored ourselves. 
