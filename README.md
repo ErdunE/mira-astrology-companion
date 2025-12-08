@@ -150,7 +150,7 @@ Astrology API: https://github.com/g-battaglia/v4.astrologer-api
 ---
 
 ### Demo video
-[Placeholder](https://drive.google.com/file/d/1MpcwINBp7hNjxJivjRT4534dZtRThf-U/view?usp=share_link)
+[5MinVideo](https://drive.google.com/file/d/1Sy8Eb1_7Cw-riR4t4dP1GMPRweUN8jyP/view?usp=sharing)
 
 ---
 
