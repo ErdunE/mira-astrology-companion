@@ -12,7 +12,7 @@ Short project summary (2–3 sentences).
 **Team Roles**
 Describe what role each team member will take in this project and the tasks assigned to each member. 
 > Erdun E: Project Manager, Backend Expert, Software developer  
-> Raj Kavathekar: Senior Prompt Enginer, Frontend Expert, Web developer  
+> Raj Kavathekar: Senior Prompt Engineer, Frontend Expert, Web developer  
 > Davie Wu: Site Reliability Engineer, Infrastructure Expert, Junior Developer
 
 ---
@@ -51,9 +51,9 @@ A brief description/context of the problem you are approaching and problem under
 
 **Proposed Solution:**  
 High-level description of the application, key features, and user flow.
-> - AI Astrology chatbot, that provides users with relevant astrology informartion, features and readings.
-> - AI Chat, Visualizations such as birth and various other charts, Horoscope Readings, customized profiles
-> - User creates account -> New user creates profile and puts in information -> Redirected to chat (Existing Users directly go to chat) -> We pull user information such as chat history and artifacts to provide it to that specific user -> User chats with AI -> API Calls -> Data is stored on our backend such as chat logs and artifects
+> - **Description:** AI Astrology chatbot, that provides users with relevant astrology informartion, chart and readings.
+> - **Key features:** AI Chat, Birth Chart visualization, Horoscope Readings, customized profiles
+> - **User flow:** User creates account -> New user creates profile and puts in information -> Redirected to new chat (Existing Users directly go to chat) -> We pull user information such as chat history and artifacts to provide it to that specific user -> User chats with AI -> API Calls -> Data is stored on our backend such as chat logs and artifacts
 
 **Cloud Provider:**  
 AWS / GCP / Azure (with justification).
@@ -78,7 +78,7 @@ Your diagram must:
 * Include clear boundaries (public vs private)
 
 **Miro Diagram:**  
-[Click here to view the architecture diagram](https://miro.com/app/board/uXjVJsOlhH8=/?share_link_id=35191105301)
+[Click here to view the architecture diagram](https://miro.com/app/board/uXjVJsOlhH8=/?share_link_id=35191105301)  
 Additionally include a PDF copy of your architecture under `\docs`.
 
 
@@ -138,6 +138,8 @@ Use the structure below for your spreadsheet. Feel free to add additional column
 |---|---|---|---|
 
 Add up time and cost at the end of the columns.
+
+Budget spreadsheet added in `/docs/final/budget`.
 
 ---
 
